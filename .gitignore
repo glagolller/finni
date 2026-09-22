@@ -1,0 +1,42 @@
+# Local secrets and signing
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+key.properties
+local.properties
+credentials.json
+service-account*.json
+
+# Personal and restricted source materials
+local-private/
+private/
+source-documents/
+FINNI_HANDOFF.md
+FINNI_REPLY_TO_LOGIC.md
+message.txt
+
+# Flutter and Android generated files (for future scaffold)
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+android/.gradle/
+android/captures/
+*.apk
+*.aab
+*.log
+
+# Editors and OS
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+Desktop.ini
+~$*

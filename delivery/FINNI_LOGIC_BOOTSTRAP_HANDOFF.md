@@ -1,8 +1,11 @@
 # FINNI: передача каркаса и контракта стороне интерфейса
 
-Дата: 24.09.2026  
-Ветка: `logic/bootstrap`  
-Pull request: https://github.com/glagolller/finni/pull/2  
+Дата: 24.09.2026
+
+Ветка: `logic/bootstrap`
+
+Pull request: https://github.com/glagolller/finni/pull/2
+
 Зависимость: PR основан на `frontend/stage3-design`, потому что исправляет RC2 из PR #1. Сначала следует принять PR #1; после этого diff PR #2 автоматически сократится до изменений стороны логики.
 
 ## 1. Статус и границы

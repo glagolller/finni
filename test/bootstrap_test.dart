@@ -3,17 +3,19 @@ import 'dart:convert';
 import 'package:finni/contracts/contracts.dart';
 import 'package:finni/main.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('bootstrap root stays empty for the interface owner', (
+  testWidgets('production root never silently starts the preview adapter', (
     tester,
   ) async {
     await tester.pumpWidget(const FinniBootstrapRoot());
 
-    expect(find.byType(SizedBox), findsOneWidget);
-    expect(find.byType(Text), findsNothing);
+    expect(
+      find.textContaining('Игровой сервис ещё не подключён'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Тестовый UI'), findsNothing);
   });
 
   test('appearance contract exposes nine combinations', () {

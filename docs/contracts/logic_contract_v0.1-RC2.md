@@ -1,8 +1,8 @@
-# FINNI: контракт логики `logic_contract_v0.1`, редакция RC2
+# FINNI: контракт логики `logic_contract_v0.1`, редакция RC2.1
 
 Дата: 24.09.2026
 
-Статус: единая исправленная спецификация для согласования сторонами Л и Ф до начала реализации.
+Статус: архитектурная основа с примененным патчем R1–R6 от 24.09.2026.
 
 Основание: `FINNI_HANDOFF.md`, `FINNI_REPLY_TO_LOGIC.md`, предыдущий ответ Л и замечания `FINNI_CONTRACT_REVIEW_FOR_FRIEND.md`.
 
@@ -125,7 +125,8 @@ Preview-методы не изменяют БД, историю, ревизию 
 | `soundEnabled` | `bool` | нет | `true` |
 | `reducedMotion` | `bool` | нет | `false` |
 | `largeTextPreferred` | `bool` | нет | `false` |
-| `purchaseConfirmationEnabled` | `bool` | нет | `true`; в RC2 отключение UI-настройкой не отменяет обязательные подтверждения контракта |
+
+Обязательные подтверждения покупок не являются настройкой и не могут быть отключены. Поле `purchaseConfirmationEnabled` удалено из контракта и не показывается в UI.
 
 ### 4.5. `BudgetPlan`
 
@@ -153,11 +154,14 @@ Preview-методы не изменяют БД, историю, ревизию 
 | `ordinarySavingsWithdrawn` | `int` | нет |
 | `goalRedemptionSpent` | `int` | нет |
 | `qualifyingSavings` | `int` | нет |
+| `savingsMoodBonusGranted` | `bool` | нет |
 | `requiredNeedsMet` | `bool` | нет |
 | `planKept` | `bool` | нет |
 | `savingsHabitKept` | `bool` | нет |
 
 `qualifyingSavings = max(0, savingsDeposited - ordinarySavingsWithdrawn)`. Снятие не является доходом. Списание на достигнутую цель не уменьшает `qualifyingSavings`.
+
+`savingsMoodBonusGranted` предотвращает повторное повышение mood переводами: бонус +2 дается только при первом в периоде переходе `qualifyingSavings` из 0 в положительное значение и больше в этом периоде не повторяется.
 
 ### 4.7. `RequiredPurchase`
 
@@ -383,6 +387,7 @@ Preview-методы не изменяют БД, историю, ревизию 
 | Метод | Параметры | Результат |
 | --- | --- | --- |
 | `listProfiles()` | нет | `ListProfilesResult {profiles, errorCode?, messageForChild?}` |
+| `getBootstrapConfig()` | нет | версия контракта и доступные form/palette до создания профиля |
 | `loadState(profileId)` | `profileId` | `LoadStateResult {found, stateSnapshot?, errorCode?, messageForChild?}` |
 | `getItemCatalog(profileId)` | `profileId` | `CatalogResult<ItemSummary>` |
 | `getGoalCatalog(profileId)` | `profileId` | `CatalogResult<GoalSummary>` |
@@ -568,7 +573,8 @@ Preview-query содержит `profileId`, `expectedGeneration`, `expectedRevis
 | создание/reset | установить 60 | установить 60 | `profile_created` / `demo_reset` | «Финни готов учиться вместе с тобой.» |
 | confirmBudget | 0 | +2 | `plan_confirmed` | «План помогает Финни понимать следующий шаг.» |
 | покупка | по таблице товаров | по таблице товаров | item reason | название результата покупки |
-| перевод в накопления, amount > 0 | 0 | +2 | `savings_deposit` | «Часть монет стала ближе к цели.» |
+| первое положительное чистое пополнение периода | 0 | +2 один раз | `savings_deposit_first_positive` | «Часть монет стала ближе к цели.» |
+| последующие пополнения периода | 0 | 0 | `savings_deposit` | «Накопления обновлены.» |
 | обычное снятие | 0 | 0 | `savings_withdrawal` | «Монеты снова доступны; прогресс этого периода пересчитан.» |
 | верное задание | 0 | +4 | `task_correct` | текст correct задания |
 | неверное задание | 0 | −2 | `task_needs_retry` | спокойная подсказка задания |
@@ -597,7 +603,7 @@ Stage пересчитывается только `finishPeriod`. Изменен
 
 ### 10.1. Обязательные дополнительные шаги демонстрации
 
-После периода 1 при `available = 30` выполняется preview покупки `item.music_player` за 70. Результат: `allowed = false`, `insufficient_funds`, недостача 40, деньги, слот, питомец и история не меняются.
+После финансовых действий периода 1, пока период еще `open` и `available = 30`, выполняется preview покупки `item.music_player` за 70. Результат: `allowed = false`, `insufficient_funds`, недостача 40, деньги, слот, питомец и история не меняются. Только после этой проверки вызывается `finishPeriod`.
 
 Затем приложение закрывается и запускается. `listProfiles` находит demo, `loadState` возвращает те же 30 доступных, 30 накоплений, завершенный период 1, показатели 65/84 и `stateRevision`. Повторного дохода нет.
 
@@ -605,7 +611,7 @@ Stage пересчитывается только `finishPeriod`. Изменен
 
 ### 10.2. Плохая серия
 
-Контрольный расчет: в каждом из пяти периодов подтвердить план 0/100/0 с `needs_underfunded`, купить только желание, ничего не накопить и завершить период с `mandatory_needs_unmet`. Каждый период дает 0 баллов качества. После пяти периодов stage остается `baby`, qualityPoints = 0. Mood и satiety ограничиваются нулем, профиль и накопленная история не удаляются.
+Контрольный расчет: в каждом из пяти периодов подтвердить план 0/100/0 с `needs_underfunded`, купить только желание, ничего не накопить и завершить период с `mandatory_needs_unmet`. Факт укладывается в такой план, поэтому каждый период дает 1 балл за `planKept`, но 0 за обязательные покупки и накопления. После пяти периодов `qualityPoints = 5`, stage остается `baby`. Mood и satiety ограничиваются нулем, профиль и накопленная история не удаляются.
 
 ## 11. Полные примеры состояний
 
@@ -662,6 +668,7 @@ Stage пересчитывается только `finishPeriod`. Изменен
       "ordinarySavingsWithdrawn": 0,
       "goalRedemptionSpent": 0,
       "qualifyingSavings": 0,
+      "savingsMoodBonusGranted": false,
       "requiredNeedsMet": false,
       "planKept": false,
       "savingsHabitKept": false
@@ -712,8 +719,7 @@ Stage пересчитывается только `finishPeriod`. Изменен
   "settings": {
     "soundEnabled": true,
     "reducedMotion": false,
-    "largeTextPreferred": false,
-    "purchaseConfirmationEnabled": true
+    "largeTextPreferred": false
   }
 }
 ```
@@ -734,7 +740,7 @@ Stage пересчитывается только `finishPeriod`. Изменен
     "requiredPurchases":[{"itemId":"item.food","quantity":1,"fulfilled":true},{"itemId":"item.hygiene","quantity":1,"fulfilled":true}],
     "purchaseSlotsTotal":3,"purchaseSlotsUsed":2,"purchasedItemIds":["item.food","item.hygiene"],
     "budgetPlan":{"periodId":"profile.demo.01.g1.p1","needsLimit":50,"wantsLimit":20,"savingsTarget":30,"unallocatedAmount":0,"requiredNeedsCostAtConfirmation":50,"confirmedAt":"2026-09-24T09:02:00Z"},
-    "actual":{"periodIncome":100,"taskRewards":10,"needsSpent":50,"wantsSpent":0,"savingsDeposited":30,"ordinarySavingsWithdrawn":0,"goalRedemptionSpent":0,"qualifyingSavings":30,"requiredNeedsMet":true,"planKept":true,"savingsHabitKept":true},
+    "actual":{"periodIncome":100,"taskRewards":10,"needsSpent":50,"wantsSpent":0,"savingsDeposited":30,"ordinarySavingsWithdrawn":0,"goalRedemptionSpent":0,"qualifyingSavings":30,"savingsMoodBonusGranted":true,"requiredNeedsMet":true,"planKept":true,"savingsHabitKept":true},
     "startedAt":"2026-09-24T09:00:00Z","closedAt":null
   },
   "availableBalance":30,
@@ -764,7 +770,7 @@ Stage пересчитывается только `finishPeriod`. Изменен
     ],
     "stageHistory":[{"stage":"baby","reachedAfterPeriod":0,"qualityPoints":0,"reachedAt":"2026-09-24T09:00:00Z"}]
   },
-  "settings":{"soundEnabled":true,"reducedMotion":false,"largeTextPreferred":false,"purchaseConfirmationEnabled":true}
+  "settings":{"soundEnabled":true,"reducedMotion":false,"largeTextPreferred":false}
 }
 ```
 
@@ -784,7 +790,7 @@ Stage пересчитывается только `finishPeriod`. Изменен
     "requiredPurchases":[{"itemId":"item.food","quantity":1,"fulfilled":true},{"itemId":"item.hygiene","quantity":1,"fulfilled":true}],
     "purchaseSlotsTotal":3,"purchaseSlotsUsed":2,"purchasedItemIds":["item.food","item.hygiene"],
     "budgetPlan":{"periodId":"profile.demo.01.g1.p1","needsLimit":50,"wantsLimit":20,"savingsTarget":30,"unallocatedAmount":0,"requiredNeedsCostAtConfirmation":50,"confirmedAt":"2026-09-24T09:02:00Z"},
-    "actual":{"periodIncome":100,"taskRewards":10,"needsSpent":50,"wantsSpent":0,"savingsDeposited":30,"ordinarySavingsWithdrawn":10,"goalRedemptionSpent":0,"qualifyingSavings":20,"requiredNeedsMet":true,"planKept":false,"savingsHabitKept":true},
+    "actual":{"periodIncome":100,"taskRewards":10,"needsSpent":50,"wantsSpent":0,"savingsDeposited":30,"ordinarySavingsWithdrawn":10,"goalRedemptionSpent":0,"qualifyingSavings":20,"savingsMoodBonusGranted":true,"requiredNeedsMet":true,"planKept":false,"savingsHabitKept":true},
     "startedAt":"2026-09-24T09:00:00Z","closedAt":null
   },
   "availableBalance":40,
@@ -814,7 +820,7 @@ Stage пересчитывается только `finishPeriod`. Изменен
     ],
     "stageHistory":[{"stage":"baby","reachedAfterPeriod":0,"qualityPoints":0,"reachedAt":"2026-09-24T09:00:00Z"}]
   },
-  "settings":{"soundEnabled":true,"reducedMotion":false,"largeTextPreferred":false,"purchaseConfirmationEnabled":true}
+  "settings":{"soundEnabled":true,"reducedMotion":false,"largeTextPreferred":false}
 }
 ```
 
@@ -832,7 +838,7 @@ Stage пересчитывается только `finishPeriod`. Изменен
     "requiredPurchases":[{"itemId":"item.food","quantity":1,"fulfilled":true},{"itemId":"item.hygiene","quantity":1,"fulfilled":true}],
     "purchaseSlotsTotal":3,"purchaseSlotsUsed":2,"purchasedItemIds":["item.food","item.hygiene"],
     "budgetPlan":{"periodId":"profile.demo.01.g1.p1","needsLimit":50,"wantsLimit":20,"savingsTarget":30,"unallocatedAmount":0,"requiredNeedsCostAtConfirmation":50,"confirmedAt":"2026-09-24T09:02:00Z"},
-    "actual":{"periodIncome":100,"taskRewards":10,"needsSpent":50,"wantsSpent":0,"savingsDeposited":30,"ordinarySavingsWithdrawn":0,"goalRedemptionSpent":0,"qualifyingSavings":30,"requiredNeedsMet":true,"planKept":true,"savingsHabitKept":true},
+    "actual":{"periodIncome":100,"taskRewards":10,"needsSpent":50,"wantsSpent":0,"savingsDeposited":30,"ordinarySavingsWithdrawn":0,"goalRedemptionSpent":0,"qualifyingSavings":30,"savingsMoodBonusGranted":true,"requiredNeedsMet":true,"planKept":true,"savingsHabitKept":true},
     "startedAt":"2026-09-24T09:00:00Z","closedAt":"2026-09-24T09:20:00Z"
   },
   "availableBalance":30,
@@ -862,7 +868,7 @@ Stage пересчитывается только `finishPeriod`. Изменен
     ],
     "stageHistory":[{"stage":"baby","reachedAfterPeriod":0,"qualityPoints":0,"reachedAt":"2026-09-24T09:00:00Z"}]
   },
-  "settings":{"soundEnabled":true,"reducedMotion":false,"largeTextPreferred":false,"purchaseConfirmationEnabled":true}
+  "settings":{"soundEnabled":true,"reducedMotion":false,"largeTextPreferred":false}
 }
 ```
 
@@ -880,7 +886,7 @@ Stage пересчитывается только `finishPeriod`. Изменен
     "requiredPurchases":[{"itemId":"item.food","quantity":1,"fulfilled":true},{"itemId":"item.hygiene","quantity":1,"fulfilled":true}],
     "purchaseSlotsTotal":3,"purchaseSlotsUsed":3,"purchasedItemIds":["item.food","item.hygiene","item.ball"],
     "budgetPlan":{"periodId":"profile.demo.01.g1.p5","needsLimit":50,"wantsLimit":35,"savingsTarget":30,"unallocatedAmount":0,"requiredNeedsCostAtConfirmation":50,"confirmedAt":"2026-09-24T10:02:00Z"},
-    "actual":{"periodIncome":100,"taskRewards":5,"needsSpent":50,"wantsSpent":35,"savingsDeposited":30,"ordinarySavingsWithdrawn":0,"goalRedemptionSpent":120,"qualifyingSavings":30,"requiredNeedsMet":true,"planKept":true,"savingsHabitKept":true},
+    "actual":{"periodIncome":100,"taskRewards":5,"needsSpent":50,"wantsSpent":35,"savingsDeposited":30,"ordinarySavingsWithdrawn":0,"goalRedemptionSpent":120,"qualifyingSavings":30,"savingsMoodBonusGranted":true,"requiredNeedsMet":true,"planKept":true,"savingsHabitKept":true},
     "startedAt":"2026-09-24T10:00:00Z","closedAt":"2026-09-24T10:30:00Z"
   },
   "availableBalance":5,
@@ -914,7 +920,7 @@ Stage пересчитывается только `finishPeriod`. Изменен
       {"stage":"grown","reachedAfterPeriod":4,"qualityPoints":12,"reachedAt":"2026-09-24T10:00:00Z"}
     ]
   },
-  "settings":{"soundEnabled":true,"reducedMotion":false,"largeTextPreferred":false,"purchaseConfirmationEnabled":true}
+  "settings":{"soundEnabled":true,"reducedMotion":false,"largeTextPreferred":false}
 }
 ```
 
@@ -1030,34 +1036,99 @@ UI не изображает успех. Повтор использует то�
 
 Обязательно: `PRAGMA foreign_keys = ON`, миграции через `PRAGMA user_version`, отсутствие автоматического удаления БД при ошибке, reset/delete только явно, сохранение receipts вне очищаемого состояния поколения.
 
-Планируемые файлы Л после отдельного поручения начать реализацию:
+Каркас, созданный по прямому поручению от 24.09.2026:
 
 - `pubspec.yaml`, `pubspec.lock`, `android/`;
-- `lib/contracts/contract_version.dart`;
+- `lib/contracts/constants.dart`, `enums.dart`, `requests.dart`;
 - `lib/contracts/models/` и `lib/contracts/logic_service.dart`;
+- `assets/content/tasks.json`, `content_manifest.json`;
+- `test/bootstrap_test.dart`, `BUILD.md`.
+
+Будущая реализация логики и хранения:
+
 - `lib/domain/economy/`, `lib/domain/tasks/`, `lib/domain/progress/`, `lib/domain/services/`;
 - `lib/data/database/`, `lib/data/repositories/`, `lib/data/content/`;
 - `assets/content/items.json`, `goals.json`, `tasks.json`, `demo_periods.json`;
 - `test/domain/`, `test/data/`, `integration_test/demo_flow_test.dart`;
 - `docs/contracts/logic_contract_v0.1.md`, `docs/economy/ECONOMY.md`, `docs/data/DATA.md`, `docs/content/CONTENT.md`, `docs/testing/TESTS.md`, `BUILD.md`.
 
-Ф владеет `lib/ui/`, визуальными assets и временным fake adapter. Fake adapter использует модели этого контракта и фикстуры, но не реализует собственную экономику.
+Сторона интерфейса владеет `lib/ui/`, визуальными assets и временным fake adapter. Fake adapter использует модели этого контракта и фикстуры, но не реализует собственную экономику.
 
 ## 14. Организационный статус
 
-Общий private-репозиторий указан как `https://github.com/glagolller/finni.git`, основная ветка — `main`. По сообщению Ф корневой коммит `a45a879` еще ожидал подтвержденной отправки, а приглашение `ignatenkof` имело статус Pending Invite. Эти сведения являются переданной информацией и в рамках подготовки документа не проверялись.
+Общий private-репозиторий `https://github.com/glagolller/finni.git` проверен 24.09.2026. Основная ветка — `main`, общая история содержит коммит `a45a879`, доступ пользователя `ignatenkof` подтвержден через GitHub CLI.
 
-Л не создает и не публикует независимую историю `master`. После подтверждения доступа работа должна начинаться с клона общей `main`. В этой задаче Git-коммиты, ветки, push, clone, установка окружения и создание Flutter-проекта не выполняются.
+Независимая история `master` не публикуется. Работа ведется в общем репозитории в ветке `logic/bootstrap`; ветка основана на `frontend/stage3-design`, поскольку исправляет RC2 из PR интерфейсной стороны.
 
-## 15. Решения, которые просим подтвердить у Ф
+## 15. Согласованные решения
 
-1. Принять RC2 как согласованную основу `logic_contract_v0.1`.
-2. Подтвердить правило четырех доступных товаров и трех покупок за период.
-3. Подтвердить удаление лимита двух наград в пользу шести однократных наград по 5 монет.
-4. Подтвердить шесть типов интерактивных симуляций и их критерии.
-5. Подтвердить числовые эффекты питомца и тексты причин.
-6. Подтвердить предупреждение `needs_underfunded` вместо блокировки ошибочного плана.
-7. Подтвердить `profileGeneration`, durable receipts и актуальный снимок при replayed.
-8. Перед реализацией отдельно подтвердить доступ к общей `main`, окружение, package ID и визуальные ID.
+1. RC2.1 с патчем R1–R6 является текущей основой `logic_contract_v0.1`.
+2. Действуют четыре доступных товара и максимум три покупки за период.
+3. Шесть заданий дают однократную награду по 5 монет; лимита двух наград нет.
+4. Шесть типов симуляций, их входы, критерии и feedback зафиксированы в `assets/content/tasks.json`.
+5. Числовые эффекты питомца остаются проектными предложениями до балансировки по тестам.
+6. Недофинансированный план сохраняется с предупреждением `needs_underfunded`, а не блокируется.
+7. `profileGeneration`, durable receipts и актуальный снимок при replayed входят в обязательную семантику будущего хранилища.
+8. Package ID — `ru.finni.pet`; формы и палитры перечислены в R4.
 
-До этого подтверждения документ остается проектной спецификацией. Он не утверждает, что приложение, БД, сборка или тесты уже существуют.
+Документ является проектной спецификацией. Flutter-каркас и контрактные модели существуют; экономика, SQLite-хранилище, экраны и полноценная Android-сборка еще не реализованы.
+
+## 16. Патч R1–R6 от 24.09.2026
+
+Этот раздел нормативно заменяет противоречащие ему формулировки RC2. R1, R2 и R6 также исправлены непосредственно в разделах 9–10.
+
+### R3. Формат заданий
+
+Каждый `TaskInput` и `TaskAnswer` сериализуется объектом с обязательным discriminator `type`. Значение обязано совпадать с `TaskDefinition.interactionType`; иначе `submitTaskAnswer` возвращает `invalid_task_answer` без попытки, денег и эффектов.
+
+| type | Поля input | Поля answer |
+| --- | --- | --- |
+| `budget_allocation` | `income`, `minimumNeeds`, `minimumSavings`, `allowedCategories: List<String>` | `needs`, `wants`, `savings` |
+| `plan_fact_choice` | `plans: List<{id, needs, wants, savings}>`, `actual: {needs, wants, savings}` | `selectedOptionId` |
+| `savings_schedule` | `goalAmount`, `periodCount`, `minimumPerPeriod` | `amountsByPeriod: List<int>` ровно `periodCount` элементов |
+| `savings_comparison` | `operations: List<{direction, amount}>`, `options: List<{id, label}>` | `selectedOptionId` |
+| `purchase_basket` | `budget`, `maxSelectedItems`, `requiredItemIds`, `items: List<{id, title, price, expenseType}>` | `selectedItemIds` без повторов |
+| `expense_classification` | `targetGroups`, `entries: List<{id, label}>` | `groupByEntryId: Map<String, ExpenseType>` для каждого entry |
+
+Полные `TaskDefinition`, критерии и оба текста результата для всех шести заданий находятся в `assets/content/tasks.json`. Этот файл является общей проектной фикстурой; UI получает публичную часть через `getTaskDefinition`, а criterion остается внутри реализации логики.
+
+Словарь `NextAction.code`:
+
+| code | params |
+| --- | --- |
+| `open_profile`, `open_home`, `open_budget`, `open_savings`, `open_goals`, `open_tasks`, `continue_period`, `preview_finish_period`, `finish_period`, `reset_demo`, `close_dialog`, `open_adult_section` | пустой объект |
+| `open_catalog` | необязательный `maxPrice: int` |
+| `open_task`, `retry_task` | обязательный `taskId: String`; для retry также `attemptsLeft: int` |
+| `start_next_period` | обязательный `number: int` |
+| `repeat_preview` | обязательный `operation: String` |
+| `retry_same_action` | `reuseActionId: true` |
+
+Неизвестный `code` игнорируется UI с безопасным возвратом на home и записывается в диагностику; свободный текст не разбирается как навигация.
+
+### R4. Создание, подтверждения и normal
+
+До профиля UI вызывает `getBootstrapConfig()`. Ответ содержит `contractVersion`, `contentVersion`, формы `pet.form.01` (округлый), `.02` (ушки), `.03` (хохолок) и палитры `pet.palette.01` (мятный/точки), `.02` (абрикосовый/полосы), `.03` (сиреневый/звезды). Получается 9 комбинаций. Неизвестные ID дают `invalid_pet_form` или `invalid_pet_palette`.
+
+Для reset demo точный `confirmationText` — `СБРОСИТЬ`, для delete — `УДАЛИТЬ`. Сравнение выполняется после trim, с учетом регистра. Несовпадение дает `confirmation_required`; отмена не вызывает команду.
+
+Demo заканчивается после периода 5. Normal не заканчивается: для периода `n > 5` используется шаблон `((n - 1) mod 5) + 1`, но ID периода и номер продолжают возрастать. Доход, попытки, purchase slots и факты создаются заново для нового номера; баланс, накопления, цели, история и развитие переносятся.
+
+### R5. Результаты и история целей
+
+Неверный ответ имеет `ActionResult.success = true`, `taskAttempt.outcome = needs_retry`, `rewardGranted = false`, `moneyDelta = null`; полный новый snapshot отличается увеличенной ревизией, счетчиком попыток и mood −2. Правильность никогда не определяется через `success`.
+
+Replayed возвращает исходные `moneyDelta`, `petDelta`, `taskAttempt` и `operationAppliedRevision`, но `stateSnapshot` всегда является текущим полным состоянием. UI не повторяет анимации для `replayed`.
+
+Reset возвращает полный `state.new_demo` с тем же profileId, `generation + 1`, монотонной `stateRevision + 1`, новым ID периода поколения, `lastReasonCode = demo_reset` и актуальными timestamps. Повтор actionId не выполняет reset снова.
+
+Delete возвращает `stateSnapshot = null`; durable receipt и tombstone остаются. Повтор delete возвращает `replayed` и `null`. `listProfiles` больше не содержит удаленный ID.
+
+`HistoryPage` дополнен `completedGoals: List<CompletedGoalRecord>`. Запись содержит `goalId`, `title`, `amountSpent`, `completedAt`, `transactionId`; поэтому история завершенной цели не зависит от текущего `activeGoal`. Связанная транзакция имеет `relatedEntityId = goalId` и цену на момент завершения.
+
+Полные базовые snapshots для new/open/withdrawn/closed/completed находятся в разделе 11. Fake adapter обязан материализовать полный `GameState`; fixture-ссылки не являются полями API. Ветки с одинаковой revision не объединяются в одну последовательность.
+
+### R6. Эффекты review и накоплений
+
+`completed_review` и `demo_completed_review` являются чтением: они не создают попытку, не меняют revision, деньги, reward, satiety или mood. Для повторного показа определения используется `getTaskDefinition`, а не `submitTaskAnswer`.
+
+Mood +2 начисляется только один раз за период при первом переходе `qualifyingSavings` из 0 в положительное значение. Флаг `BudgetActual.savingsMoodBonusGranted` сохраняется. Последующие пополнения и циклы deposit/withdraw меняют деньги и qualifying savings, но не дают повторный mood-бонус.

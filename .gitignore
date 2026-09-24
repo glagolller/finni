@@ -27,11 +27,19 @@ message.txt
 .pub-cache/
 .pub/
 build/
+coverage/
+.widget_preview/
 android/.gradle/
 android/captures/
+android/app/debug/
+android/app/profile/
+android/app/release/
 *.apk
 *.aab
 *.log
+*.class
+*.pyc
+*.swp
 
 # Editors and OS
 .idea/

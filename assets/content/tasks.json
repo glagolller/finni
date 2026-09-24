@@ -1,0 +1,83 @@
+{
+  "contentVersion": "content_v0.2",
+  "tasks": [
+    {
+      "id": "task.budget.01",
+      "title": "Распредели доход",
+      "theme": "budget",
+      "interactionType": "budget_allocation",
+      "prompt": "Распредели 100 монет между нужным, желаниями и накоплениями.",
+      "rewardAmount": 5,
+      "maxAttemptsPerPeriod": 3,
+      "simulationOnly": true,
+      "input": {"type": "budget_allocation", "income": 100, "minimumNeeds": 50, "minimumSavings": 20, "allowedCategories": ["needs", "wants", "savings"]},
+      "criterion": {"type": "budget_allocation", "requiredTotal": 100, "minimumNeeds": 50, "minimumSavings": 20},
+      "feedback": {"correct": "Ты сначала учел нужное и оставил часть на цель.", "needsRetry": "Проверь общую сумму, нужное и хотя бы 20 монет накоплений."}
+    },
+    {
+      "id": "task.budget.02",
+      "title": "Сравни план и факт",
+      "theme": "budget",
+      "interactionType": "plan_fact_choice",
+      "prompt": "Выбери план, которому соответствует факт: 50 на нужное, 35 на желания и 30 в накопления.",
+      "rewardAmount": 5,
+      "maxAttemptsPerPeriod": 3,
+      "simulationOnly": true,
+      "input": {"type": "plan_fact_choice", "plans": [{"id": "option.plan_a", "needs": 45, "wants": 40, "savings": 30}, {"id": "option.plan_b", "needs": 50, "wants": 35, "savings": 30}, {"id": "option.plan_c", "needs": 50, "wants": 30, "savings": 35}], "actual": {"needs": 50, "wants": 35, "savings": 30}},
+      "criterion": {"type": "single_choice", "correctOptionId": "option.plan_b"},
+      "feedback": {"correct": "План и факт совпали по всем трем частям.", "needsRetry": "Сравни отдельно нужное, желания и накопления."}
+    },
+    {
+      "id": "task.savings.01",
+      "title": "Составь путь к цели",
+      "theme": "savings",
+      "interactionType": "savings_schedule",
+      "prompt": "Разложи цель 120 монет на четыре регулярных шага.",
+      "rewardAmount": 5,
+      "maxAttemptsPerPeriod": 3,
+      "simulationOnly": true,
+      "input": {"type": "savings_schedule", "goalAmount": 120, "periodCount": 4, "minimumPerPeriod": 20},
+      "criterion": {"type": "savings_schedule", "minimumTotal": 120, "minimumEachPeriod": 20, "requiredPeriodCount": 4},
+      "feedback": {"correct": "Регулярные шаги довели накопления до цели.", "needsRetry": "Проверь четыре шага: вместе нужно не меньше 120."}
+    },
+    {
+      "id": "task.savings.02",
+      "title": "Посчитай накопления",
+      "theme": "savings",
+      "interactionType": "savings_comparison",
+      "prompt": "Сколько чистых накоплений получится после трех операций?",
+      "rewardAmount": 5,
+      "maxAttemptsPerPeriod": 3,
+      "simulationOnly": true,
+      "input": {"type": "savings_comparison", "operations": [{"direction": "to_savings", "amount": 30}, {"direction": "from_savings", "amount": 10}, {"direction": "to_savings", "amount": 5}], "options": [{"id": "option.15", "label": "15"}, {"id": "option.25", "label": "25"}, {"id": "option.45", "label": "45"}]},
+      "criterion": {"type": "single_choice", "correctOptionId": "option.25"},
+      "feedback": {"correct": "Снятие уменьшает вклад периода: 30 − 10 + 5 = 25.", "needsRetry": "Снятые монеты не считаются новым доходом или накоплением."}
+    },
+    {
+      "id": "task.payments.01",
+      "title": "Собери корзину",
+      "theme": "payments_and_purchases",
+      "interactionType": "purchase_basket",
+      "prompt": "Собери корзину до 70 монет и обязательно добавь полезную еду.",
+      "rewardAmount": 5,
+      "maxAttemptsPerPeriod": 3,
+      "simulationOnly": true,
+      "input": {"type": "purchase_basket", "budget": 70, "maxSelectedItems": 2, "requiredItemIds": ["item.food"], "items": [{"id": "item.food", "title": "Полезная еда", "price": 30, "expenseType": "need"}, {"id": "item.hygiene", "title": "Набор для ухода", "price": 20, "expenseType": "need"}, {"id": "item.ball", "title": "Мяч", "price": 35, "expenseType": "want"}, {"id": "item.hat", "title": "Яркая шапочка", "price": 45, "expenseType": "want"}]},
+      "criterion": {"type": "purchase_basket", "maximumTotal": 70, "maximumItems": 2, "requiredItemIds": ["item.food"]},
+      "feedback": {"correct": "Нужное куплено, и корзина помещается в бюджет.", "needsRetry": "Сначала добавь еду и проверь сумму корзины."}
+    },
+    {
+      "id": "task.payments.02",
+      "title": "Нужное или желаемое",
+      "theme": "payments_and_purchases",
+      "interactionType": "expense_classification",
+      "prompt": "Разнеси покупки по группам: нужное и желаемое.",
+      "rewardAmount": 5,
+      "maxAttemptsPerPeriod": 3,
+      "simulationOnly": true,
+      "input": {"type": "expense_classification", "targetGroups": ["need", "want"], "entries": [{"id": "item.food", "label": "Полезная еда"}, {"id": "item.hygiene", "label": "Набор для ухода"}, {"id": "item.school_lunch", "label": "Школьный обед"}, {"id": "item.health_check", "label": "Забота о здоровье"}, {"id": "item.ball", "label": "Мяч"}, {"id": "item.hat", "label": "Яркая шапочка"}]},
+      "criterion": {"type": "expense_classification", "groupByEntryId": {"item.food": "need", "item.hygiene": "need", "item.school_lunch": "need", "item.health_check": "need", "item.ball": "want", "item.hat": "want"}},
+      "feedback": {"correct": "Ты отличил потребности от желаний.", "needsRetry": "Подумай, без чего забота нужна сейчас, а что можно отложить."}
+    }
+  ]
+}

@@ -339,6 +339,148 @@ void main() {
     expect((await service.listProfiles()).profiles, isEmpty);
     await service.close();
   });
+
+  test(
+    'normal mode continues with wrapped content after period five',
+    () async {
+      final service = await open();
+      final created = await service.createProfile(
+        CreateProfileCommand(
+          actionId: nextAction('create-normal'),
+          mode: ProfileMode.normal,
+          petName: 'Финни',
+          formId: 'pet.form.01',
+          paletteId: 'pet.palette.01',
+        ),
+      );
+      var state = created.stateSnapshot!;
+      final wants = [
+        'item.ball',
+        'item.ball',
+        'item.hat',
+        'item.room_decor',
+        'item.ball',
+      ];
+
+      for (var period = 1; period <= 5; period++) {
+        final plan = await service.confirmBudget(
+          BudgetCommand(
+            profileId: state.profile.id,
+            expectedGeneration: state.profile.generation,
+            expectedRevision: state.stateRevision,
+            actionId: nextAction('normal-plan'),
+            needsLimit: 0,
+            wantsLimit: 100,
+            savingsTarget: 0,
+            acceptedWarnings: const {WarningCode.needsUnderfunded},
+          ),
+        );
+        state = plan.stateSnapshot!;
+        state = await buy(service, state, wants[period - 1], nextAction);
+        state = await finish(
+          service,
+          state,
+          nextAction,
+          acceptMissingNeeds: true,
+        );
+        expect(state.currentPeriod.status, PeriodStatus.closed);
+        if (period < 5) state = await startNext(service, state, nextAction);
+      }
+
+      state = await startNext(service, state, nextAction);
+      expect(state.currentPeriod.number, 6);
+      expect(state.currentPeriod.status, PeriodStatus.open);
+      expect(
+        state.currentPeriod.availableItemIds,
+        containsAll([
+          'item.food',
+          'item.hygiene',
+          'item.ball',
+          'item.music_player',
+        ]),
+      );
+      expect(state.currentPeriod.purchaseSlotsUsed, 0);
+      expect(state.availableBalance, 395);
+      expect(state.learningProgress.completedPeriods, 5);
+      await service.close();
+    },
+  );
+
+  test('task review is read-only and settings survive restart', () async {
+    var service = await open();
+    var state = await create(service);
+    state = await confirmPlan(service, state, 50, 20, 30, nextAction);
+    final completed = await service.submitTaskAnswer(
+      TaskAnswerCommand(
+        profileId: state.profile.id,
+        expectedGeneration: state.profile.generation,
+        expectedRevision: state.stateRevision,
+        actionId: nextAction('task'),
+        taskId: 'task.budget.01',
+        answer: const BudgetAllocationAnswer(needs: 50, wants: 20, savings: 30),
+      ),
+    );
+    state = completed.stateSnapshot!;
+    final revisionBeforeReview = state.stateRevision;
+    final balanceBeforeReview = state.availableBalance;
+
+    final review = await service.getTaskDefinition(
+      state.profile.id,
+      'task.budget.01',
+    );
+    expect(review.availability, TaskAvailabilityCode.completedReview);
+    expect(review.definition, isNotNull);
+    final afterReview = (await service.loadState(state.profile.id))
+        .stateSnapshot!;
+    expect(afterReview.stateRevision, revisionBeforeReview);
+    expect(afterReview.availableBalance, balanceBeforeReview);
+
+    const settings = ProfileSettings(
+      soundEnabled: false,
+      reducedMotion: true,
+      largeTextPreferred: true,
+    );
+    final updated = await service.updateSettings(
+      UpdateSettingsCommand(
+        profileId: state.profile.id,
+        expectedGeneration: state.profile.generation,
+        expectedRevision: state.stateRevision,
+        actionId: nextAction('settings'),
+        settings: settings,
+      ),
+    );
+    expect(updated.success, isTrue);
+    await service.close();
+
+    service = await open();
+    final restored = (await service.loadState(state.profile.id)).stateSnapshot!;
+    expect(restored.settings.soundEnabled, isFalse);
+    expect(restored.settings.reducedMotion, isTrue);
+    expect(restored.settings.largeTextPreferred, isTrue);
+    await service.close();
+  });
+
+  test('history normalizes invalid cursors and page limits', () async {
+    final service = await open();
+    final state = await create(service);
+
+    final zeroLimit = await service.getHistory(
+      state.profile.id,
+      cursor: '-1',
+      limit: 0,
+    );
+    expect(zeroLimit.transactions, hasLength(1));
+    expect(zeroLimit.nextCursor, isNull);
+
+    final oversizedLimit = await service.getHistory(
+      state.profile.id,
+      cursor: 'not-a-number',
+      limit: 1000,
+    );
+    expect(oversizedLimit.transactions, hasLength(1));
+    expect(oversizedLimit.nextCursor, isNull);
+    await service.close();
+  });
 }
 
 class TestClock {

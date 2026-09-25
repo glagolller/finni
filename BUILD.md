@@ -7,7 +7,7 @@
 - Android Gradle Plugin `9.1.0`.
 - Kotlin Android plugin `2.4.0`.
 - Java bytecode target `17`.
-- `sqflite 2.4.4`, `path 1.9.1`, `flutter_lints 6.0.0`.
+- `sqflite 2.4.4`, тестовый `sqflite_common_ffi 2.4.3`, `path 1.9.1`, `flutter_lints 6.0.0`.
 - Android applicationId и namespace: `ru.finni.pet`.
 - Минимальная Android-версия: API 26 (Android 8.0).
 
@@ -33,7 +33,14 @@ flutter devices
 flutter run
 ```
 
-Текущий root намеренно пустой: UI подключается отдельной веткой стороны интерфейса.
+Production-фабрика сервиса:
+
+```dart
+final service = await createLogicService();
+runApp(FinniApp(service: service));
+```
+
+Импорт фабрики: `package:finni/logic.dart`. UI и `FinniApp` остаются в ветке стороны интерфейса.
 
 ## Android
 
@@ -51,12 +58,13 @@ flutter build apk --release
 
 Release signing пока не настроен и не подменяется debug-ключом. Перед выпуском создать локальный keystore, хранить `key.properties` и секреты вне Git и добавить signingConfig по инструкции команды. Передаваемый APK нужно проверить установкой без IDE на Android 8.0+.
 
-## Статус 24.09.2026
+## Статус 25.09.2026
 
 - `flutter pub get`: пройдено.
 - `dart format lib test`: пройдено.
 - `flutter analyze`: пройдено через ASCII-junction, 0 issues.
-- `flutter test`: пройдено, 4 tests.
-- Android APK: не выполнено из-за отсутствия JDK и Android SDK.
+- `flutter test --no-pub`: пройдено, 8 tests, включая SQLite FFI.
+- Microsoft OpenJDK 17.0.20.1: подготовлен переносимо вне Git, SHA-256 проверен.
+- Android APK: не выполнено из-за отсутствия Android SDK; принятие лицензий оставлено пользователю.
 - Физический телефон: не проверен.
 - Release signing: не настроен.

@@ -1,0 +1,10 @@
+{
+  "contentVersion": "content_v0.2",
+  "periods": [
+    {"template":1,"availableItemIds":["item.food","item.hygiene","item.ball","item.music_player"],"requiredItemIds":["item.food","item.hygiene"]},
+    {"template":2,"availableItemIds":["item.school_lunch","item.hygiene","item.ball","item.room_decor"],"requiredItemIds":["item.school_lunch","item.hygiene"]},
+    {"template":3,"availableItemIds":["item.food","item.hygiene","item.hat","item.music_player"],"requiredItemIds":["item.food","item.hygiene"]},
+    {"template":4,"availableItemIds":["item.health_check","item.food","item.room_decor","item.music_player"],"requiredItemIds":["item.health_check","item.food"]},
+    {"template":5,"availableItemIds":["item.food","item.hygiene","item.ball","item.hat"],"requiredItemIds":["item.food","item.hygiene"]}
+  ]
+}

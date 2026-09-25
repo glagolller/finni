@@ -1,6 +1,6 @@
 # Окружение стороны логики
 
-Фактическая проверка 24.09.2026 на Windows 11 25H2 (`10.0.26200.9457`).
+Фактическая проверка обновлена 25.09.2026 на Windows 11 25H2 (`10.0.26200.9457`).
 
 | Компонент | Результат |
 | --- | --- |
@@ -12,10 +12,10 @@
 | Android Gradle Plugin | `9.1.0` |
 | Kotlin plugin | `2.4.0` |
 | Java target | 17 в Gradle-конфигурации |
-| JDK на хосте логики | не найден |
+| JDK на хосте логики | переносимый Microsoft OpenJDK `17.0.20.1` вне Git; SHA-256 `3d9006956fc8af5601cd24ffc4f468bef48279c7ebd8171b9bdf90d0aabfbf1f` |
 | Android SDK / adb | не найдены |
 | Flutter PATH | SDK установлен переносимо вне Git; глобальный PATH не менялся |
 
-`flutter doctor -v` подтвердил Flutter и Windows, но сообщил об отсутствии Android SDK. Проверка network resources внутри sandbox дала DNS-ошибку, хотя загрузка SDK и pub-пакетов через разрешенное сетевое выполнение прошла успешно.
+`flutter doctor -v` подтвердил Flutter и Windows, но сообщил об отсутствии Android SDK. Android command-line tools и SDK packages не загружались: официальный процесс требует принятия Android SDK License Agreement пользователем. Рекомендуемый пакет на 25.09.2026 — `commandlinetools-win-15859902_latest.zip`, опубликованный SHA-256 — `90ae805d20434428bffcb699c290860f19bb5f66a67e6b330067e3de801fb04a`.
 
 Из-за кириллицы в родительском пути analysis server завершился с ошибкой LSP JSON. Повтор того же `flutter analyze` через временную ASCII-junction прошел без замечаний. Junction удалена после проверки; исходники не копировались.

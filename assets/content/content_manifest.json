@@ -5,5 +5,11 @@
   "petPalettes": ["pet.palette.01", "pet.palette.02", "pet.palette.03"],
   "items": ["item.food", "item.hygiene", "item.school_lunch", "item.health_check", "item.ball", "item.hat", "item.room_decor", "item.music_player"],
   "goals": ["goal.playground", "goal.bicycle", "goal.telescope"],
-  "tasks": ["task.budget.01", "task.budget.02", "task.savings.01", "task.savings.02", "task.payments.01", "task.payments.02"]
+  "tasks": ["task.budget.01", "task.budget.02", "task.savings.01", "task.savings.02", "task.payments.01", "task.payments.02"],
+  "files": {
+    "items": "assets/content/items.json",
+    "goals": "assets/content/goals.json",
+    "periods": "assets/content/demo_periods.json",
+    "tasks": "assets/content/tasks.json"
+  }
 }

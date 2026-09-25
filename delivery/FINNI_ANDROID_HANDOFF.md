@@ -1,7 +1,7 @@
 # FINNI: Android-подготовка, 26.09.2026
 
 Ветка: `logic/android-build`. База PR: `frontend/service-integration`.
-PR: ссылка добавляется после публикации.
+PR: https://github.com/glagolller/finni/pull/7
 
 ## Исходники и ответственность
 

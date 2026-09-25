@@ -1,5 +1,14 @@
 # Сборка и запуск
 
+## Проверенная Android-сборка 26.09.2026
+
+Debug APK из lib/main.dart успешно собран на Flutter 3.47.5, JDK 17.0.20.1,
+Gradle 9.3.1, Android API 36, Build Tools 36.0.0 и NDK 28.2.13676358.
+Точная команда: `flutter build apk --debug --no-pub --target lib/main.dart`.
+Результаты, локальный путь, SHA-256 и сценарий устройства находятся в
+[едином Android handoff](delivery/FINNI_ANDROID_HANDOFF.md).
+Установка на физический телефон пока не проверена; исторические блокеры ниже сняты.
+
 ## Зафиксированный toolchain
 
 - Flutter `3.47.5` stable, framework revision `6a19cca56475dbfba1478ee68d7bd0c2ef891da1`.

@@ -1,11 +1,12 @@
-# FINNI: Android-подготовка, 26.09.2026
+# FINNI: debug APK готов, 26.09.2026
 
 Ветка: `logic/android-build`. База PR: `frontend/service-integration`.
 PR: https://github.com/glagolller/finni/pull/7
 
 ## Исходники и ответственность
 
-Проверенный коммит приложения: `99fbcc502f66bcf8c8f61cfe5c307aeef2aac505`.
+Коммит APK: `f622971aa101fb287a6ee126a9b8bd2e862a3b70`, чистое дерево на момент сборки.
+Проверенный тестами коммит приложения: `99fbcc502f66bcf8c8f61cfe5c307aeef2aac505`.
 Он объединяет UI `22ac7fea1258efc47d591d07989539baeb52ff97` и аудит
 `26414c3` (PR #5) обычным merge без дублирования коммитов.
 Начальное рабочее дерево было чистым. Main не объединялся.
@@ -20,12 +21,20 @@ RC2.1, экономика, UI и модели в этом этапе не изм
 | flutter pub get | Успешно |
 | flutter analyze --no-pub | 0 issues |
 | flutter test --no-pub | 20/20, включая полный UI-проход пяти периодов с SQLite FFI |
-| flutter build apk --debug --no-pub --target lib/main.dart | Exit 1: No Android SDK found |
-| flutter devices | Windows и Edge; Android не обнаружен средствами Flutter |
-| Установка и запуск на Galaxy A34 | Не выполнены: SDK/adb и APK отсутствуют |
+| flutter build apk --debug --no-pub --target lib/main.dart | Успешно, assembleDebug 456 секунд |
+| flutter doctor -v | Android toolchain OK, все лицензии приняты пользователем |
+| adb devices -l | Пустой список |
+| apksigner verify --verbose | Verifies, подпись APK v2 |
+| Установка и запуск на Galaxy A34 | Не выполнены: телефон не подключен |
 
-APK не создан, фактического пути к артефакту и SHA-256 нет.
-Ожидаемый путь после успешной сборки: `build/app/outputs/flutter-apk/app-debug.apk`.
+APK: `C:/Users/fpp/Documents/ChatGPT/хакатон/finni/build/app/outputs/flutter-apk/app-debug.apk`.
+Размер: 156408469 байт. Файл локальный, не добавлен в Git.
+SHA-256: `39c08fd69e22708eb9e545e3d15cc3f03f60997ffec13e637bf5dbe36ba9a7be`.
+Метаданные aapt: `ru.finni.pet`, versionName `0.1.0`, versionCode `1`,
+minSdk 26, target/compileSdk 36, ABI arm64-v8a/armeabi-v7a/x86_64.
+Это debug APK с debug-подписью, не финальный release.
+Исходники после 20/20 тестов не изменялись: повторный прогон не требовался.
+При первой сборке было предупреждение SDK XML v4/v3, сборка завершилась успешно.
 Тесты SQLite FFI не заменяют проверку sqflite на Android.
 
 ## Версии и компоненты
@@ -34,25 +43,32 @@ APK не создан, фактического пути к артефакту �
 | --- | --- |
 | Flutter / Dart | 3.47.5 / 3.13.4, установленный переносимый SDK |
 | JDK | Microsoft OpenJDK 17.0.20.1 |
-| Gradle wrapper | 9.3.1, объявлен в проекте; выполнение Gradle не подтверждено |
-| AGP / Kotlin plugin | 9.1.0 / 2.4.0, объявлены; разрешение Android-зависимостей не проверено |
+| Gradle wrapper | 9.3.1, выполнение и сборка подтверждены |
+| AGP / Kotlin plugin | 9.1.0 / 2.4.0, сборка прошла |
 | compileSdk / targetSdk / minSdk | 36 / 36 / 26 |
-| SDK Build Tools | Требуется 36.0.0 |
-| NDK | Требуется 28.2.13676358 из FlutterExtension.kt |
-| Android SDK / platform-tools | Не установлены на проверенном хосте |
+| SDK Build Tools | Установлен 36.0.0 |
+| NDK | Установлен 28.2.13676358 |
+| Android SDK / platform-tools | API 36 / 37.0.1 |
+| Command-line tools | 22.0, архив 15859902 |
 
 Требования семейства AGP 9.1 к Gradle 9.3.1 и JDK 17 согласуются с проектом:
 [официальная таблица](https://developer.android.com/build/releases/agp-9-1-0-release-notes).
-Полная совместимость Kotlin/плагинов будет установлена только сборкой.
+Практическая совместимость текущей конфигурации подтверждена debug-сборкой.
 
-## Ручное принятие лицензий и продолжение
+## Подготовка SDK и воспроизведение
+
+Выполнено: пользователь скачал ZIP, его SHA-256 проверен и совпал с опубликованным,
+инструменты распакованы в `C:/Users/fpp/.cache/finni/android-sdk`.
+Пользователь лично выполнил `--licenses` и сообщил о завершении.
+После проверки файлов лицензий агент установил компоненты и собрал APK.
+Следующие инструкции сохранены для нового окружения; повторять принятие на этом хосте не нужно.
 
 На [официальной странице](https://developer.android.com/studio#command-tools)
 пользователь выбирает Windows command-line tools, читает и принимает условия,
 скачивает `commandlinetools-win-15859902_latest.zip` и сообщает локальный путь.
 Принятие условий требуется уже перед скачиванием. Агент этого не выполнял.
 Опубликованный SHA-256: `90ae805d20434428bffcb699c290860f19bb5f66a67e6b330067e3de801fb04a`.
-Архив на этом этапе не скачан и его локальный хеш не проверен.
+Локальный архив: `D:/яндекс загрузки/commandlinetools-win-15859902_latest.zip`.
 
 После получения архива агент проверяет хеш и распаковывает его так, чтобы
 существовал `C:/Users/fpp/.cache/finni/android-sdk/cmdline-tools/latest/bin/sdkmanager.bat`.

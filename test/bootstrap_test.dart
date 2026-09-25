@@ -6,17 +6,26 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('production root never silently starts the preview adapter', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const FinniBootstrapRoot());
-
-    expect(
-      find.textContaining('Игровой сервис ещё не подключён'),
-      findsOneWidget,
-    );
-    expect(find.textContaining('Тестовый UI'), findsNothing);
-  });
+  testWidgets(
+    'production startup failure offers retry without preview fallback',
+    (tester) async {
+      var calls = 0;
+      await tester.pumpWidget(
+        FinniBootstrapRoot(
+          serviceFactory: () async {
+            calls++;
+            throw StateError('unavailable store');
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Не удалось открыть игру'), findsOneWidget);
+      expect(find.textContaining('Тестовый UI'), findsNothing);
+      await tester.tap(find.text('Повторить'));
+      await tester.pumpAndSettle();
+      expect(calls, 2);
+    },
+  );
 
   test('appearance contract exposes nine combinations', () {
     expect(supportedPetFormIds.length, 3);

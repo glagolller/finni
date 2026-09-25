@@ -36,6 +36,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  sqflite_common_ffi: 2.4.3
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -59,6 +60,9 @@ flutter:
         - asset: assets/fonts/Neucha.ttf
   assets:
     - assets/content/content_manifest.json
+    - assets/content/items.json
+    - assets/content/goals.json
+    - assets/content/demo_periods.json
     - assets/content/tasks.json
 
   # To add assets to your application, add an assets section, like this:

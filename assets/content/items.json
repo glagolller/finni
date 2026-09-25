@@ -1,0 +1,13 @@
+{
+  "contentVersion": "content_v0.2",
+  "items": [
+    {"id":"item.food","title":"Полезная еда","expenseType":"need","price":30,"visualAssetId":"item.food","satietyChange":15,"moodChange":2,"reasonCode":"purchase_food"},
+    {"id":"item.hygiene","title":"Набор для ухода","expenseType":"need","price":20,"visualAssetId":"item.hygiene","satietyChange":0,"moodChange":6,"reasonCode":"purchase_hygiene"},
+    {"id":"item.school_lunch","title":"Школьный обед","expenseType":"need","price":25,"visualAssetId":"item.school_lunch","satietyChange":10,"moodChange":3,"reasonCode":"purchase_school_lunch"},
+    {"id":"item.health_check","title":"Забота о здоровье","expenseType":"need","price":40,"visualAssetId":"item.health_check","satietyChange":5,"moodChange":5,"reasonCode":"purchase_health"},
+    {"id":"item.ball","title":"Мяч","expenseType":"want","price":35,"visualAssetId":"item.ball","satietyChange":0,"moodChange":8,"reasonCode":"purchase_ball"},
+    {"id":"item.hat","title":"Яркая шапочка","expenseType":"want","price":45,"visualAssetId":"item.hat","satietyChange":0,"moodChange":7,"reasonCode":"purchase_hat"},
+    {"id":"item.room_decor","title":"Украшение комнаты","expenseType":"want","price":55,"visualAssetId":"item.room_decor","satietyChange":0,"moodChange":10,"reasonCode":"purchase_room_decor"},
+    {"id":"item.music_player","title":"Музыкальная игрушка","expenseType":"want","price":70,"visualAssetId":"item.music_player","satietyChange":0,"moodChange":12,"reasonCode":"purchase_music_player"}
+  ]
+}

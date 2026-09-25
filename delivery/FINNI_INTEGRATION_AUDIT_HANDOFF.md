@@ -6,7 +6,7 @@
 
 База: `frontend/service-integration`
 
-Pull request: будет добавлен после публикации ветки.
+Pull request: https://github.com/glagolller/finni/pull/5
 
 ## Итог
 

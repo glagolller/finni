@@ -4,6 +4,10 @@ import 'package:flutter/services.dart';
 import '../contracts/contracts.dart';
 import 'game_controller.dart';
 import 'pet_avatar.dart';
+import 'task_panel.dart';
+import 'history_panel.dart';
+import 'confirmation_dialog.dart';
+part 'game_screens.dart';
 
 class FinniApp extends StatelessWidget {
   const FinniApp({super.key, this.service, this.previewMode = false});
@@ -71,7 +75,20 @@ class FinniApp extends StatelessWidget {
   );
 }
 
-enum _Page { home, budget, shop, savings, tasks, progress, help }
+enum _Page {
+  home,
+  budget,
+  shop,
+  savings,
+  tasks,
+  progress,
+  help,
+  task,
+  period,
+  history,
+  adult,
+  settings,
+}
 
 class _GameShell extends StatefulWidget {
   const _GameShell({required this.service, required this.previewMode});
@@ -93,6 +110,18 @@ class _GameShellState extends State<_GameShell> {
   final savings = TextEditingController();
   final amount = TextEditingController();
   String? inputError;
+  String? selectedTask;
+  TaskDraft taskDraft = TaskDraft();
+  Future<TaskDefinitionResult>? taskDefinition;
+  PeriodSummary? lastSummary;
+  bool adultUnlocked = false;
+  final adultAnswer = TextEditingController();
+  _Page helpReturn = _Page.home;
+  final scroll = ScrollController();
+  double get textScale => (MediaQuery.textScalerOf(context).scale(
+    1,
+  )).clamp(game.state?.settings.largeTextPreferred == true ? 1.25 : 1.0, 10.0);
+  void update(VoidCallback action) => setState(action);
   Future<CatalogResult<ItemSummary>>? items;
   Future<CatalogResult<GoalSummary>>? goals;
 
@@ -104,6 +133,8 @@ class _GameShellState extends State<_GameShell> {
 
   @override
   void dispose() {
+    scroll.dispose();
+    adultAnswer.dispose();
     game.dispose();
     for (final controller in [name, needs, wants, savings, amount]) {
       controller.dispose();
@@ -114,6 +145,21 @@ class _GameShellState extends State<_GameShell> {
   bool get blocked => game.busy || game.canRetry;
 
   void navigate(_Page target) {
+    if (blocked) {
+      return;
+    }
+    if (target == _Page.help) {
+      helpReturn = page;
+    }
+    if (target != _Page.adult &&
+        target != _Page.settings &&
+        target != _Page.help) {
+      adultUnlocked = false;
+      adultAnswer.clear();
+    }
+    if (scroll.hasClients) {
+      scroll.jumpTo(0);
+    }
     setState(() {
       page = target;
       inputError = null;
@@ -192,7 +238,7 @@ class _GameShellState extends State<_GameShell> {
       const Color(0xffac396b),
       state.savingsBalance,
     );
-    if (MediaQuery.textScalerOf(context).scale(16) > 23) {
+    if (textScale * 16 > 23) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [available, saved],
@@ -225,135 +271,164 @@ class _GameShellState extends State<_GameShell> {
     animation: game,
     builder: (context, _) {
       final state = game.state;
-      return PopScope(
-        canPop: page == _Page.home,
-        onPopInvokedWithResult: (didPop, result) {
-          if (!didPop) navigate(_Page.home);
-        },
-        child: Scaffold(
-          appBar: AppBar(
-            title: const Text('Питомец Финни'),
-            leading: page == _Page.home
-                ? null
-                : IconButton(
-                    tooltip: 'На главный экран',
-                    onPressed: () => navigate(_Page.home),
-                    icon: const Icon(Icons.arrow_back),
+      return MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: TextScaler.linear(textScale),
+          disableAnimations:
+              state?.settings.reducedMotion == true ||
+              MediaQuery.of(context).disableAnimations,
+        ),
+        child: PopScope(
+          canPop: page == _Page.home,
+          onPopInvokedWithResult: (didPop, result) {
+            if (!didPop) {
+              navigate(
+                page == _Page.task
+                    ? _Page.tasks
+                    : page == _Page.help
+                    ? helpReturn
+                    : _Page.home,
+              );
+            }
+          },
+          child: Scaffold(
+            appBar: AppBar(
+              title: const Text('Питомец Финни'),
+              leading: page == _Page.home
+                  ? null
+                  : IconButton(
+                      tooltip: 'На главный экран',
+                      onPressed: () => navigate(_Page.home),
+                      icon: const Icon(Icons.arrow_back),
+                    ),
+              actions: [
+                if (state != null)
+                  IconButton(
+                    tooltip: 'Взрослому',
+                    icon: const Icon(Icons.family_restroom),
+                    onPressed: blocked
+                        ? null
+                        : () {
+                            adultUnlocked = false;
+                            navigate(_Page.adult);
+                          },
                   ),
-            actions: [
-              IconButton(
-                tooltip: 'Справка',
-                onPressed: () => navigate(_Page.help),
-                icon: const Icon(Icons.help_outline),
-              ),
-            ],
-          ),
-          body: SafeArea(
-            child: Column(
-              children: [
-                if (widget.previewMode)
-                  const MaterialBanner(
-                    content: Text('Тестовый UI · данные не сохраняются'),
-                    actions: [Text('ПРОСМОТР')],
-                  ),
-                if (game.busy)
-                  const LinearProgressIndicator(semanticsLabel: 'Загружаем'),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      if (game.error != null)
-                        card(
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                game.error!,
-                                semanticsLabel: 'Ошибка: ${game.error}',
-                              ),
-                              TextButton(
-                                onPressed: game.busy
-                                    ? null
-                                    : () async {
-                                        if (game.canRetry) {
-                                          await showResult(
-                                            await game.retryLast(),
-                                          );
-                                        } else {
-                                          await game.initialize();
-                                        }
-                                      },
-                                child: Text(
-                                  game.canRetry
-                                      ? 'Повторить действие'
-                                      : 'Повторить загрузку',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      if (inputError != null)
-                        Text(
-                          inputError!,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                        ),
-                      if (page == _Page.help)
-                        ...help()
-                      else if (state == null)
-                        ...welcome()
-                      else
-                        ...content(state),
-                    ],
-                  ),
+                IconButton(
+                  tooltip: 'Справка',
+                  onPressed: blocked ? null : () => navigate(_Page.help),
+                  icon: const Icon(Icons.help_outline),
                 ),
               ],
             ),
-          ),
-          bottomNavigationBar: state == null
-              ? null
-              : NavigationBar(
-                  height: MediaQuery.textScalerOf(context).scale(16) > 23
-                      ? 110
-                      : 80,
-                  selectedIndex: switch (page) {
-                    _Page.shop => 1,
-                    _Page.savings => 2,
-                    _Page.tasks => 3,
-                    _ => 0,
-                  },
-                  onDestinationSelected: (i) => navigate(
-                    [_Page.home, _Page.shop, _Page.savings, _Page.tasks][i],
+            body: SafeArea(
+              child: Column(
+                children: [
+                  if (widget.previewMode)
+                    const MaterialBanner(
+                      content: Text('Тестовый UI · данные не сохраняются'),
+                      actions: [Text('ПРОСМОТР')],
+                    ),
+                  if (game.busy)
+                    const LinearProgressIndicator(semanticsLabel: 'Загружаем'),
+                  Expanded(
+                    child: ListView(
+                      controller: scroll,
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        if (game.error != null)
+                          card(
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  game.error!,
+                                  semanticsLabel: 'Ошибка: ${game.error}',
+                                ),
+                                TextButton(
+                                  onPressed: game.busy
+                                      ? null
+                                      : () async {
+                                          if (game.canRetry) {
+                                            await showResult(
+                                              await game.retryLast(),
+                                            );
+                                          } else {
+                                            await game.initialize();
+                                          }
+                                        },
+                                  child: Text(
+                                    game.canRetry
+                                        ? 'Повторить действие'
+                                        : 'Повторить загрузку',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (inputError != null)
+                          Text(
+                            inputError!,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        if (page == _Page.help)
+                          ...help()
+                        else if (state == null)
+                          ...welcome()
+                        else
+                          ...content(state),
+                      ],
+                    ),
                   ),
-                  destinations: const [
-                    NavigationDestination(
-                      icon: Icon(Icons.home_outlined, color: Color(0xff416ea5)),
-                      label: 'Дом',
+                ],
+              ),
+            ),
+            bottomNavigationBar: state == null
+                ? null
+                : NavigationBar(
+                    height: textScale * 16 > 23 ? 110 : 80,
+                    selectedIndex: switch (page) {
+                      _Page.shop => 1,
+                      _Page.savings => 2,
+                      _Page.tasks => 3,
+                      _ => 0,
+                    },
+                    onDestinationSelected: (i) => navigate(
+                      [_Page.home, _Page.shop, _Page.savings, _Page.tasks][i],
                     ),
-                    NavigationDestination(
-                      icon: Icon(
-                        Icons.shopping_bag_outlined,
-                        color: Color(0xffb65432),
+                    destinations: const [
+                      NavigationDestination(
+                        icon: Icon(
+                          Icons.home_outlined,
+                          color: Color(0xff416ea5),
+                        ),
+                        label: 'Дом',
                       ),
-                      label: 'Покупки',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(
-                        Icons.savings_outlined,
-                        color: Color(0xffa43e79),
+                      NavigationDestination(
+                        icon: Icon(
+                          Icons.shopping_bag_outlined,
+                          color: Color(0xffb65432),
+                        ),
+                        label: 'Покупки',
                       ),
-                      label: 'Копилка',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(
-                        Icons.school_outlined,
-                        color: Color(0xff36734f),
+                      NavigationDestination(
+                        icon: Icon(
+                          Icons.savings_outlined,
+                          color: Color(0xffa43e79),
+                        ),
+                        label: 'Копилка',
                       ),
-                      label: 'Задания',
-                    ),
-                  ],
-                ),
+                      NavigationDestination(
+                        icon: Icon(
+                          Icons.school_outlined,
+                          color: Color(0xff36734f),
+                        ),
+                        label: 'Задания',
+                      ),
+                    ],
+                  ),
+          ),
         ),
       );
     },
@@ -481,29 +556,22 @@ class _GameShellState extends State<_GameShell> {
       ),
     ],
     _Page.savings => savingsPage(state),
-    _Page.tasks => [
-      heading('Задания'),
-      const Text(
-        'Учебные симуляции. Выполнение заданий подключается следующим шагом.',
+    _Page.tasks => tasksPage(state),
+    _Page.task => taskPage(state),
+    _Page.period => periodPage(state),
+    _Page.history => [
+      HistoryPanel(
+        key: ValueKey('${state.profile.id}-${state.profile.generation}'),
+        service: widget.service,
+        profileId: state.profile.id,
       ),
-      for (final task in state.taskHub.tasks)
-        card(
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(task.title),
-              Text(
-                task.completed
-                    ? 'Выполнено · повтор без награды'
-                    : 'Награда ${task.rewardAmount} монет',
-              ),
-              if (task.unavailableReason != null) Text(task.unavailableReason!),
-            ],
-          ),
-        ),
     ],
+    _Page.adult => adultPage(state),
+    _Page.settings => settingsPage(state),
     _Page.progress => [
       heading('Как мы растём'),
+      Text('Баллы заботы: ${state.learningProgress.qualityPoints}'),
+      button('История решений', () => navigate(_Page.history), secondary: true),
       Text('Завершено периодов: ${state.learningProgress.completedPeriods}'),
       Text(
         'Выполнено заданий: ${state.taskHub.tasks.where((t) => t.completed).length} из ${state.taskHub.tasks.length}',
@@ -590,6 +658,7 @@ class _GameShellState extends State<_GameShell> {
     ),
     button('Мой бюджет', () => navigate(_Page.budget)),
     button('Прогресс', () => navigate(_Page.progress), secondary: true),
+    button('Итог периода', () => navigate(_Page.period), secondary: true),
     if (state.currentPeriod.status != PeriodStatus.open)
       Text(
         state.currentPeriod.status == PeriodStatus.demoCompleted
@@ -791,6 +860,14 @@ class _GameShellState extends State<_GameShell> {
               },
         secondary: direction == TransferDirection.fromSavings,
       ),
+    if (state.activeGoal != null)
+      button(
+        'Получить мечту',
+        state.currentPeriod.status == PeriodStatus.open &&
+                state.activeGoal!.status == GoalStatus.reachable
+            ? () => redeem(state)
+            : null,
+      ),
     heading('Выбери мечту'),
     catalog<GoalSummary>(
       goals,
@@ -800,7 +877,7 @@ class _GameShellState extends State<_GameShell> {
             Text('${goal.title} · ${goal.targetAmount} монет'),
             button(
               goal.selected ? 'Выбрана' : 'Выбрать',
-              goal.selected
+              goal.selected || state.currentPeriod.status != PeriodStatus.open
                   ? null
                   : () async {
                       final query = GoalQuery(
@@ -886,6 +963,29 @@ class _GameShellState extends State<_GameShell> {
   Future<void> showResult(ActionResult? result) async {
     if (!mounted || result == null) return;
     if (!result.success) return; // The error panel provides the retry path.
+    if (result.periodSummary != null) {
+      lastSummary = result.periodSummary;
+    }
+    if (game.state == null) {
+      adultUnlocked = false;
+      page = _Page.home;
+      lastSummary = null;
+      await game.initialize();
+    } else if (page == _Page.adult &&
+        game.state!.profile.generation > 1 &&
+        result.moneyDelta?.incomeChange == 100) {
+      adultUnlocked = false;
+      page = _Page.home;
+      lastSummary = null;
+    }
+    if (!mounted) {
+      return;
+    }
+    if (result.outcome == ActionOutcome.applied &&
+        game.state?.settings.soundEnabled == true &&
+        !widget.previewMode) {
+      SystemSound.play(SystemSoundType.click).catchError((Object _) {});
+    }
     final message = result.outcome == ActionOutcome.replayed
         ? 'Действие уже было сохранено. Показаны актуальные данные.'
         : result.messageForChild;
@@ -893,7 +993,35 @@ class _GameShellState extends State<_GameShell> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Результат'),
-        content: Text(message),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(message),
+              if (result.taskAttempt case final attempt?
+                  when result.outcome != ActionOutcome.replayed) ...[
+                Text(attempt.explanation),
+                Text(
+                  attempt.rewardGranted
+                      ? 'Награда: +${attempt.rewardAmount} монет'
+                      : 'Награда не начислена',
+                ),
+                Text('Попыток осталось: ${attempt.remainingAttempts}'),
+              ],
+              if (result.moneyDelta case final money?
+                  when result.outcome != ActionOutcome.replayed)
+                Text(
+                  'Доступно: ${money.availableChange >= 0 ? '+' : ''}${money.availableChange} · копилка: ${money.savingsChange >= 0 ? '+' : ''}${money.savingsChange}',
+                ),
+              if (result.petDelta case final delta?
+                  when result.outcome != ActionOutcome.replayed)
+                Text(delta.explanationForChild),
+              if (result.periodSummary case final summary?)
+                periodSummaryCard(summary),
+            ],
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -906,6 +1034,7 @@ class _GameShellState extends State<_GameShell> {
 
   List<Widget> help() => [
     heading('Подсказки'),
+    button('Вернуться к игре', () => navigate(helpReturn), secondary: true),
     card(const Text('Бюджет — план: сколько потратить и сколько отложить.')),
     card(
       const Text('Сначала нужное. Желания можно отложить на следующий период.'),

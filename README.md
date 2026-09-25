@@ -4,7 +4,7 @@
 
 ## Текущий этап
 
-25.09.2026: frontend/service-integration объединяет UI v0.3 с настоящей экономикой RC2.1 и SQLite из PR #4. Production root открывает createLogicService; main_preview.dart запускает отдельный тестовый просмотр. 16/16 тестов на ПК Ф. APK пока не собран, часть экранов ещё предстоит. См. [проверку интеграции](docs/testing/SERVICE-INTEGRATION.md) и [статус](docs/setup/STATUS.md).
+26.09.2026: frontend/service-integration объединяет UI v0.3 с настоящей экономикой RC2.1 и SQLite из PR #4. Production root открывает createLogicService; main_preview.dart запускает отдельный тестовый просмотр. 17/17 тестов на ПК Ф: пять периодов пройдены через интерфейс. Игровые экраны подключены; APK и телефонная приёмка ещё предстоят. См. [проверку интеграции](docs/testing/SERVICE-INTEGRATION.md) и [статус](docs/setup/STATUS.md).
 
 ## Документы
 

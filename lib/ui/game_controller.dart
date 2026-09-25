@@ -50,6 +50,17 @@ class GameController extends ChangeNotifier {
     return true;
   }
 
+  void leaveProfile() {
+    if (busy || canRetry) {
+      return;
+    }
+    ++_readEpoch;
+    state = null;
+    error = null;
+    _retry = null;
+    _changed();
+  }
+
   Future<void> initialize() async {
     if (busy) return;
     busy = true;

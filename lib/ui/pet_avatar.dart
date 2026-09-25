@@ -94,37 +94,124 @@ class _PetPainter extends CustomPainter {
       canvas.drawPath(tuft, fill);
       canvas.drawPath(tuft, outline);
     }
+    if (stage == PetStage.grown) {
+      final cape = Path()
+        ..moveTo(37, 94)
+        ..quadraticBezierTo(23, 109, 19, 129)
+        ..quadraticBezierTo(35, 135, 49, 125)
+        ..lineTo(111, 125)
+        ..quadraticBezierTo(130, 135, 143, 127)
+        ..quadraticBezierTo(137, 108, 124, 94)
+        ..close();
+      canvas.drawPath(cape, Paint()..color = const Color(0xff7661ae));
+      canvas.drawPath(
+        cape,
+        Paint()
+          ..color = const Color(0xffffd776)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3,
+      );
+    }
     canvas.drawPath(body, fill);
     canvas.drawPath(body, outline);
     if (stage != PetStage.baby) {
-      final scarf = Paint()..color = const Color(0xffd65b42);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          const Rect.fromLTWH(44, 96, 72, 9),
-          const Radius.circular(4),
-        ),
-        scarf,
-      );
-      canvas.drawPath(
-        Path()
-          ..moveTo(105, 102)
-          ..lineTo(119, 115)
-          ..lineTo(108, 118)
-          ..close(),
-        scarf,
-      );
-    }
-    if (stage == PetStage.grown) {
-      canvas.drawCircle(
-        const Offset(54, 101),
-        7,
-        Paint()..color = const Color(0xffffcc46),
-      );
-      canvas.drawCircle(const Offset(54, 101), 7, outline);
-      canvas.drawLine(const Offset(54, 97), const Offset(54, 105), outline);
+      // Derive the wrap from the body's bounds, then transform both together.
+      final bounds = body.getBounds();
+      final left = bounds.left + bounds.width * .026;
+      final right = bounds.right - bounds.width * .026;
+      final width = right - left;
+      final band = Path()
+        ..moveTo(left + 3, 96)
+        ..quadraticBezierTo(80, 106, right - 3, 96)
+        ..lineTo(right, 106)
+        ..quadraticBezierTo(80, 117, left, 106)
+        ..close();
+      final tail = Path()
+        ..moveTo(right - 18, 102)
+        ..lineTo(right - 5, 101)
+        ..lineTo(right + 7, 123)
+        ..lineTo(right - 1, 121)
+        ..lineTo(right - 6, 128)
+        ..close();
+      final red = Paint()..color = const Color(0xffc95049);
+      final cream = Paint()..color = const Color(0xffffe6a3);
+      final seam = Paint()
+        ..color = const Color(0xff853e44)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+      canvas.drawPath(tail, red);
+      canvas.save();
+      canvas.clipPath(tail);
+      for (double y = 105; y < 130; y += 9) {
+        canvas.drawRect(Rect.fromLTWH(right - 20, y, 30, 4), cream);
+      }
+      canvas.restore();
+      canvas.drawPath(tail, seam);
+      canvas.save();
+      canvas.clipPath(body);
+      canvas.clipPath(band);
+      canvas.drawPath(band, red);
+      for (double x = left - 8; x < right + 8; x += width / 7) {
+        canvas.drawPath(
+          Path()
+            ..moveTo(x, 94)
+            ..lineTo(x + 7, 94)
+            ..lineTo(x + 14, 118)
+            ..lineTo(x + 7, 118)
+            ..close(),
+          cream,
+        );
+      }
+      canvas.restore();
+      canvas.drawPath(band, seam);
+      if (stage == PetStage.grown) {
+        canvas.drawPath(
+          band,
+          Paint()
+            ..color = const Color(0xffffd776)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2,
+        );
+        final star = Path()
+          ..moveTo(left + 18, 95)
+          ..lineTo(left + 21, 101)
+          ..lineTo(left + 28, 102)
+          ..lineTo(left + 23, 107)
+          ..lineTo(left + 24, 114)
+          ..lineTo(left + 18, 110)
+          ..lineTo(left + 12, 114)
+          ..lineTo(left + 13, 107)
+          ..lineTo(left + 8, 102)
+          ..lineTo(left + 15, 101)
+          ..close();
+        canvas.drawPath(star, Paint()..color = const Color(0xffffd776));
+        canvas.drawPath(star, seam);
+        canvas.drawPath(
+          Path()
+            ..moveTo(48, 63)
+            ..quadraticBezierTo(61, 51, 77, 52),
+          Paint()
+            ..color = const Color(0xffeffff4)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 4
+            ..strokeCap = StrokeCap.round,
+        );
+      }
     }
     canvas.drawCircle(const Offset(61, 78), 4, ink);
     canvas.drawCircle(const Offset(99, 78), 4, ink);
+    if (stage != PetStage.baby) {
+      canvas.drawCircle(
+        const Offset(60, 77),
+        1.4,
+        Paint()..color = Colors.white,
+      );
+      canvas.drawCircle(
+        const Offset(98, 77),
+        1.4,
+        Paint()..color = Colors.white,
+      );
+    }
     canvas.drawPath(
       Path()
         ..moveTo(71, 91)

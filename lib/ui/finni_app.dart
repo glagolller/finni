@@ -15,8 +15,33 @@ class FinniApp extends StatelessWidget {
     title: 'Питомец Финни',
     debugShowCheckedModeBanner: false,
     theme: ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff285f49)),
-      scaffoldBackgroundColor: const Color(0xfffbfaf4),
+      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff6851a5)),
+      scaffoldBackgroundColor: const Color(0xfffff2d9),
+      textTheme: const TextTheme(
+        headlineSmall: TextStyle(
+          fontFamily: 'Pangolin',
+          fontSize: 27,
+          color: Color(0xff38295c),
+        ),
+        titleLarge: TextStyle(
+          fontFamily: 'Pangolin',
+          fontSize: 24,
+          color: Color(0xff38295c),
+        ),
+      ),
+      cardTheme: const CardThemeData(color: Color(0xffe5f4ec)),
+      navigationBarTheme: const NavigationBarThemeData(
+        backgroundColor: Color(0xffe9defb),
+        indicatorColor: Color(0xffcbb5f0),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xffffe4ac),
+        titleTextStyle: TextStyle(
+          fontFamily: 'Pangolin',
+          fontSize: 25,
+          color: Color(0xff38295c),
+        ),
+      ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
       ),
@@ -128,14 +153,58 @@ class _GameShellState extends State<_GameShell> {
     child: Text(text, style: Theme.of(context).textTheme.headlineSmall),
   );
 
-  Widget coins(GameState state) => Row(
-    children: [
-      Expanded(
-        child: card(Text('Можно потратить\n${state.availableBalance} монет')),
+  Widget metric(IconData icon, Color color, String label, String value) =>
+      Semantics(
+        label: '$label: $value',
+        child: Tooltip(
+          message: label,
+          child: ExcludeSemantics(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: color, size: 25),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(value, style: const TextStyle(fontSize: 19)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+  Widget coins(GameState state) {
+    Widget balance(String label, IconData icon, Color color, int value) => card(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [Text(label), metric(icon, color, label, '$value')],
       ),
-      Expanded(child: card(Text('В копилке\n${state.savingsBalance} монет'))),
-    ],
-  );
+    );
+    final available = balance(
+      'Можно потратить',
+      Icons.monetization_on,
+      const Color(0xffa66b00),
+      state.availableBalance,
+    );
+    final saved = balance(
+      'В копилке',
+      Icons.savings,
+      const Color(0xffac396b),
+      state.savingsBalance,
+    );
+    if (MediaQuery.textScalerOf(context).scale(16) > 23) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [available, saved],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(child: available),
+        Expanded(child: saved),
+      ],
+    );
+  }
 
   Widget number(String label, TextEditingController controller) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 8),
@@ -245,6 +314,9 @@ class _GameShellState extends State<_GameShell> {
           bottomNavigationBar: state == null
               ? null
               : NavigationBar(
+                  height: MediaQuery.textScalerOf(context).scale(16) > 23
+                      ? 110
+                      : 80,
                   selectedIndex: switch (page) {
                     _Page.shop => 1,
                     _Page.savings => 2,
@@ -256,19 +328,28 @@ class _GameShellState extends State<_GameShell> {
                   ),
                   destinations: const [
                     NavigationDestination(
-                      icon: Icon(Icons.home_outlined),
+                      icon: Icon(Icons.home_outlined, color: Color(0xff416ea5)),
                       label: 'Дом',
                     ),
                     NavigationDestination(
-                      icon: Icon(Icons.shopping_bag_outlined),
+                      icon: Icon(
+                        Icons.shopping_bag_outlined,
+                        color: Color(0xffb65432),
+                      ),
                       label: 'Покупки',
                     ),
                     NavigationDestination(
-                      icon: Icon(Icons.savings_outlined),
+                      icon: Icon(
+                        Icons.savings_outlined,
+                        color: Color(0xffa43e79),
+                      ),
                       label: 'Копилка',
                     ),
                     NavigationDestination(
-                      icon: Icon(Icons.school_outlined),
+                      icon: Icon(
+                        Icons.school_outlined,
+                        color: Color(0xff36734f),
+                      ),
                       label: 'Задания',
                     ),
                   ],
@@ -454,19 +535,40 @@ class _GameShellState extends State<_GameShell> {
     coins(state),
     Row(
       children: [
-        PetAvatar(formId: state.pet.formId, paletteId: state.pet.paletteId),
+        PetAvatar(
+          formId: state.pet.formId,
+          paletteId: state.pet.paletteId,
+          stage: state.pet.stage,
+        ),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(stageLabel(state.pet.stage)),
+              Text(
+                stageLabel(state.pet.stage),
+                style: const TextStyle(
+                  fontFamily: 'Neucha',
+                  fontSize: 23,
+                  color: Color(0xff68428d),
+                ),
+              ),
               Text(switch (state.pet.moodCode) {
                 MoodCode.happy => 'Радуется',
                 MoodCode.calm => 'Спокоен',
                 MoodCode.needsAttention => 'Нужна забота',
               }),
-              Text('Сытость ${state.pet.satiety} из 100'),
-              Text('Настроение ${state.pet.mood} из 100'),
+              metric(
+                Icons.restaurant,
+                const Color(0xffb95426),
+                'Сытость',
+                '${state.pet.satiety}/100',
+              ),
+              metric(
+                Icons.sentiment_very_satisfied,
+                const Color(0xff8e4dab),
+                'Настроение',
+                '${state.pet.mood}/100',
+              ),
             ],
           ),
         ),

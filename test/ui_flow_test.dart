@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:finni/contracts/contracts.dart';
 import 'package:finni/ui/finni_app.dart';
+import 'package:finni/ui/pet_avatar.dart';
 import 'package:finni/ui/game_controller.dart';
 import 'package:finni/ui/preview/fixture_states.dart';
 import 'package:finni/ui/preview/preview_service.dart';
@@ -12,7 +13,12 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-GameState changed(GameState s, {int? revision, int? generation}) => GameState(
+GameState changed(
+  GameState s, {
+  int? revision,
+  int? generation,
+  PetStage? stage,
+}) => GameState(
   contractVersion: s.contractVersion,
   contentVersion: s.contentVersion,
   stateRevision: revision ?? s.stateRevision,
@@ -27,7 +33,15 @@ GameState changed(GameState s, {int? revision, int? generation}) => GameState(
   currentPeriod: s.currentPeriod,
   availableBalance: s.availableBalance,
   savingsBalance: s.savingsBalance,
-  pet: s.pet,
+  pet: PetState(
+    name: s.pet.name,
+    formId: s.pet.formId,
+    paletteId: s.pet.paletteId,
+    satiety: s.pet.satiety,
+    mood: s.pet.mood,
+    moodCode: s.pet.moodCode,
+    stage: stage ?? s.pet.stage,
+  ),
   taskHub: s.taskHub,
   learningProgress: s.learningProgress,
   settings: s.settings,
@@ -91,7 +105,7 @@ Future<void> capture(WidgetTester tester, String name) async {
   await tester.runAsync(() async {
     final image = await boundary.toImage();
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    final file = File('evidence/ui-first/$name.png');
+    final file = File('evidence/ui-child/$name.png');
     await file.parent.create(recursive: true);
     await file.writeAsBytes(bytes!.buffer.asUint8List());
     image.dispose();
@@ -101,6 +115,14 @@ Future<void> capture(WidgetTester tester, String name) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
+    for (final entry in {
+      'Pangolin': 'Pangolin-Regular.ttf',
+      'Neucha': 'Neucha.ttf',
+    }.entries) {
+      final loader = FontLoader(entry.key)
+        ..addFont(rootBundle.load('assets/fonts/${entry.value}'));
+      await loader.load();
+    }
     if (const bool.fromEnvironment('FINNI_CAPTURE') && Platform.isWindows) {
       final bytes = await File('C:/Windows/Fonts/segoeui.ttf').readAsBytes();
       final font = FontLoader('Roboto')
@@ -226,6 +248,111 @@ void main() {
       expect(service.command!.needsLimit, 0);
       expect(service.command!.actionId, isNotEmpty);
       expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets('all 27 pets keep fixed bounds and stages repaint distinctly', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(600, 1450);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RepaintBoundary(
+          key: const ValueKey('capture'),
+          child: Scaffold(
+            backgroundColor: const Color(0xfffff2d9),
+            body: Column(
+              children: [
+                const Text(
+                  'Малыш          Подросший          Взрослый',
+                  style: TextStyle(fontFamily: 'Pangolin', fontSize: 24),
+                ),
+                for (var form = 1; form <= 3; form++)
+                  for (var palette = 1; palette <= 3; palette++)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        for (final stage in PetStage.values)
+                          PetAvatar(
+                            formId: 'form.0$form',
+                            paletteId: 'palette.0$palette',
+                            stage: stage,
+                            size: 150,
+                          ),
+                      ],
+                    ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(PetAvatar), findsNWidgets(27));
+    for (final element in find.byType(PetAvatar).evaluate()) {
+      expect(
+        tester.getSize(find.byWidget(element.widget)),
+        const Size(150, 150),
+      );
+    }
+    expect(tester.takeException(), isNull);
+    await capture(tester, 'growth-27');
+    // Same element changes stage: confirms shouldRepaint and stable layout.
+    final images = <String>[];
+    for (final stage in PetStage.values) {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Center(
+            child: RepaintBoundary(
+              key: const ValueKey('pet'),
+              child: PetAvatar(
+                formId: 'form.02',
+                paletteId: 'palette.01',
+                stage: stage,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getSize(find.byType(PetAvatar)), const Size(120, 120));
+      final boundary = tester.renderObject<RenderRepaintBoundary>(
+        find.byKey(const ValueKey('pet')),
+      );
+      await tester.runAsync(() async {
+        final image = await boundary.toImage();
+        final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+        images.add(bytes!.buffer.asUint8List().toString());
+        image.dispose();
+      });
+    }
+    expect(images.toSet().length, 3);
+  });
+
+  testWidgets(
+    'home fits each stage and supports 200 percent text without overflow',
+    (tester) async {
+      for (final stage in PetStage.values) {
+        await tester.pumpWidget(const SizedBox());
+        await start(
+          tester,
+          PreviewService(snapshot: changed(openPeriodFixture(), stage: stage)),
+        );
+        expect(tester.takeException(), isNull);
+        expect(find.text('Сравни план и факт'), findsOneWidget);
+        expect(
+          tester.getBottomRight(find.text('Сравни план и факт')).dy,
+          lessThan(700),
+        );
+        await capture(tester, 'home-${stage.name}');
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        await capture(tester, 'home-${stage.name}-200');
+        tester.platformDispatcher.clearTextScaleFactorTestValue();
+      }
     },
   );
 }

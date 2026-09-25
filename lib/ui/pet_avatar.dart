@@ -1,35 +1,59 @@
 import 'package:flutter/material.dart';
 
+import '../contracts/contracts.dart';
+
 class PetAvatar extends StatelessWidget {
   const PetAvatar({
     super.key,
     required this.formId,
     required this.paletteId,
     this.size = 120,
+    this.stage = PetStage.baby,
   });
   final String formId;
   final String paletteId;
   final double size;
+  final PetStage stage;
 
   @override
   Widget build(BuildContext context) => Semantics(
     label:
-        'Финни, форма ${formId.split('.').last}, окраска ${paletteId.split('.').last}',
+        'Финни, ${formId.split('.').last}, ${paletteId.split('.').last}, ${switch (stage) {
+          PetStage.baby => 'малыш',
+          PetStage.junior => 'подросший',
+          PetStage.grown => 'взрослый',
+        }}',
     image: true,
-    child: CustomPaint(
-      size: Size(size, size),
-      painter: _PetPainter(formId, paletteId),
+    child: ClipRect(
+      child: CustomPaint(
+        size: Size(size, size),
+        painter: _PetPainter(formId, paletteId, stage),
+      ),
     ),
   );
 }
 
 class _PetPainter extends CustomPainter {
-  _PetPainter(this.form, this.palette);
+  _PetPainter(this.form, this.palette, this.stage);
+  final PetStage stage;
   final String form;
   final String palette;
   @override
   void paint(Canvas canvas, Size size) {
     canvas.scale(size.width / 160, size.height / 160);
+    // Every stage keeps the same 160 x 160 canvas and ground line.
+    final scaleX = stage == PetStage.baby
+        ? .78
+        : stage == PetStage.junior
+        ? .9
+        : 1.0;
+    final scaleY = stage == PetStage.baby
+        ? .76
+        : stage == PetStage.junior
+        ? .9
+        : 1.04;
+    canvas.translate(80 * (1 - scaleX), 140 * (1 - scaleY));
+    canvas.scale(scaleX, scaleY);
     final color = palette.endsWith('02')
         ? const Color(0xfff4bf87)
         : palette.endsWith('03')
@@ -51,12 +75,12 @@ class _PetPainter extends CustomPainter {
       ..close();
     if (form.endsWith('02')) {
       final ears = Path()
-        ..moveTo(43, 58)
-        ..lineTo(35, 20)
-        ..lineTo(67, 47)
-        ..moveTo(94, 47)
-        ..lineTo(126, 20)
-        ..lineTo(117, 60);
+        ..moveTo(43, 74)
+        ..lineTo(35, 36)
+        ..lineTo(67, 63)
+        ..moveTo(94, 63)
+        ..lineTo(126, 36)
+        ..lineTo(117, 76);
       canvas.drawPath(ears, fill);
       canvas.drawPath(ears, outline);
     } else if (form.endsWith('03')) {
@@ -72,6 +96,33 @@ class _PetPainter extends CustomPainter {
     }
     canvas.drawPath(body, fill);
     canvas.drawPath(body, outline);
+    if (stage != PetStage.baby) {
+      final scarf = Paint()..color = const Color(0xffd65b42);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(44, 96, 72, 9),
+          const Radius.circular(4),
+        ),
+        scarf,
+      );
+      canvas.drawPath(
+        Path()
+          ..moveTo(105, 102)
+          ..lineTo(119, 115)
+          ..lineTo(108, 118)
+          ..close(),
+        scarf,
+      );
+    }
+    if (stage == PetStage.grown) {
+      canvas.drawCircle(
+        const Offset(54, 101),
+        7,
+        Paint()..color = const Color(0xffffcc46),
+      );
+      canvas.drawCircle(const Offset(54, 101), 7, outline);
+      canvas.drawLine(const Offset(54, 97), const Offset(54, 105), outline);
+    }
     canvas.drawCircle(const Offset(61, 78), 4, ink);
     canvas.drawCircle(const Offset(99, 78), 4, ink);
     canvas.drawPath(
@@ -112,5 +163,7 @@ class _PetPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_PetPainter oldDelegate) =>
-      oldDelegate.form != form || oldDelegate.palette != palette;
+      oldDelegate.form != form ||
+      oldDelegate.palette != palette ||
+      oldDelegate.stage != stage;
 }

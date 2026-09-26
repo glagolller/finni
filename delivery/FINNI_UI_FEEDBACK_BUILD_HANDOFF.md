@@ -1,5 +1,7 @@
 # FINNI: APK после UI-feedback, 26.09.2026
 
+Это предыдущая сборка. [Новый APK каталога и взрослого раздела](FINNI_CATALOG_BUILD_HANDOFF.md).
+
 Ветка: `logic/android-ui-feedback`. База: `frontend/service-integration`.
 PR: https://github.com/glagolller/finni/pull/8
 Коммит APK: `8e8d50baf4ce9835af0c2e5eb759eed031fcb67b`.

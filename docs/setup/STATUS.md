@@ -1,5 +1,7 @@
 # Актуальное состояние 26.09.2026
 
+Приёмка стороны Ф: ветка frontend/service-integration обновлена fast-forward до bee7a3b из logic/android-build (PR #7). SHA-1/SHA-256 полученного APK совпали, ZIP CRC без ошибок. На ПК Ф повторно выполнены flutter analyze --no-pub: 0 замечаний; flutter test --no-pub: 20/20. Инструкция и незаполненный протокол: [ANDROID-ACCEPTANCE](../testing/ANDROID-ACCEPTANCE.md). Установка на Samsung ожидает участия пользователя; версия Android ещё неизвестна. APK debug, release-приёмка и материалы сдачи ещё не завершены. SDK установлен у Л, не на ПК Ф.
+
 Android debug APK успешно собран в logic/android-build из f622971 после ручного
 принятия лицензий пользователем. SDK установлен, doctor Android OK, APK-подпись
 проверена. Телефон через adb не обнаружен; device smoke и release signing остаются.

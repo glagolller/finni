@@ -1,7 +1,7 @@
 # FINNI: debug APK каталога и взрослого раздела
 
 Дата: 26.09.2026. Ветка: `logic/android-catalog`.
-База PR: `frontend/service-integration`. PR: ссылка добавляется после публикации.
+База PR: `frontend/service-integration`. PR: https://github.com/glagolller/finni/pull/9
 
 ## Исходники и результат
 

@@ -1,7 +1,7 @@
 # FINNI: подсказки главной, debug и release-кандидат
 
 Дата: 26.09.2026. Ветка `logic/android-guidance-release`.
-База PR: `frontend/service-integration`. Ссылка PR добавляется после публикации.
+База PR: `frontend/service-integration`. PR: https://github.com/glagolller/finni/pull/10
 Коммит обоих APK: `5eb1095fe7803477cfc3244f21394ce5af7bb24d`.
 UI 9b84c23 включён обычным merge 83a19d2; RC2.1, экономика, SQLite и контент сохранены.
 Добавлены только настройка release-подписи и tools/build-release.ps1.

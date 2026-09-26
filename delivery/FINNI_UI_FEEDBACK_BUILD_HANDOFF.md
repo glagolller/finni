@@ -1,7 +1,7 @@
 # FINNI: APK после UI-feedback, 26.09.2026
 
 Ветка: `logic/android-ui-feedback`. База: `frontend/service-integration`.
-PR: ссылка будет добавлена после публикации.
+PR: https://github.com/glagolller/finni/pull/8
 Коммит APK: `8e8d50baf4ce9835af0c2e5eb759eed031fcb67b`.
 Обновление получено fast-forward merge в существующем репозитории.
 Контракт RC2.1, экономика, SQLite, контент, зависимости и Android не изменялись.

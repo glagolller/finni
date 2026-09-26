@@ -1,3 +1,5 @@
+import 'package:finni/ui/resource_art.dart';
+
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -105,7 +107,7 @@ Future<void> capture(WidgetTester tester, String name) async {
   await tester.runAsync(() async {
     final image = await boundary.toImage();
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    final file = File('evidence/ui-complete/preview-$name.png');
+    final file = File('evidence/ui-feedback/preview-$name.png');
     await file.parent.create(recursive: true);
     await file.writeAsBytes(bytes!.buffer.asUint8List());
     image.dispose();
@@ -205,7 +207,12 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(purchase);
       await tester.pumpAndSettle();
-      expect(find.textContaining('Не хватает 40 монет'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is ResourceText && w.data.contains('Не хватает 40 монет'),
+        ),
+        findsOneWidget,
+      );
       expect(find.widgetWithText(FilledButton, 'Подтвердить'), findsNothing);
       expect(service.snapshot.availableBalance, 30);
       expect(tester.takeException(), isNull);
@@ -238,6 +245,18 @@ void main() {
       expect(service.command, isNull);
       await tester.tap(find.text('Посмотреть план'));
       await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      await tester.enterText(find.byType(TextField).at(1), '45');
+      await tester.pumpAndSettle();
+      expect(find.text('Подтвердить'), findsNothing);
+      expect(service.command, isNull);
+      await tester.enterText(find.byType(TextField).at(1), '50');
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Посмотреть план'));
+      await tester.tap(find.text('Посмотреть план'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Подтвердить'));
       await tester.tap(find.text('Подтвердить'));
       await tester.pumpAndSettle();
       expect(

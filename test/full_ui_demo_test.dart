@@ -1,3 +1,5 @@
+import 'package:finni/ui/resource_art.dart';
+
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -124,17 +126,6 @@ void main() {
         await tester.pump();
       }
 
-      Future<void> result() => click('Продолжить');
-      Future<void> confirm() async {
-        await click('Подтвердить');
-        await result();
-      }
-
-      Future<void> home() => click('Дом');
-      Future<GameState> state() async => (await tester.runAsync(() async {
-        final list = await service.listProfiles();
-        return (await service.loadState(list.profiles.first.id)).stateSnapshot!;
-      }))!;
       Future<void> screenshot(String name) async {
         if (!const bool.fromEnvironment('FINNI_CAPTURE')) {
           return;
@@ -145,12 +136,38 @@ void main() {
         await tester.runAsync(() async {
           final image = await boundary.toImage();
           final data = await image.toByteData(format: ui.ImageByteFormat.png);
-          final file = File('evidence/ui-complete/$name.png');
+          final file = File('evidence/ui-feedback/$name.png');
           await file.parent.create(recursive: true);
           await file.writeAsBytes(data!.buffer.asUint8List());
           image.dispose();
         });
       }
+
+      var checkedLargeReward = false;
+      Future<void> result() async {
+        if (!checkedLargeReward &&
+            find.text('Ты молодец!').evaluate().isNotEmpty) {
+          checkedLargeReward = true;
+          tester.platformDispatcher.textScaleFactorTestValue = 2;
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          await screenshot('reward-large-text');
+          tester.platformDispatcher.clearTextScaleFactorTestValue();
+          await tester.pumpAndSettle();
+        }
+        await click('Продолжить');
+      }
+
+      Future<void> confirm() async {
+        await click('Подтвердить');
+        await result();
+      }
+
+      Future<void> home() => click('Дом');
+      Future<GameState> state() async => (await tester.runAsync(() async {
+        final list = await service.listProfiles();
+        return (await service.loadState(list.profiles.first.id)).stateSnapshot!;
+      }))!;
 
       await tester.pumpWidget(
         RepaintBoundary(
@@ -165,7 +182,11 @@ void main() {
       expect((await state()).availableBalance, 100);
       await click('Копилка');
       final goalCard = find.ancestor(
-        of: find.text('Игровая площадка для Финни · 120 монет'),
+        of: find.byWidgetPredicate(
+          (w) =>
+              w is ResourceText &&
+              w.data == 'Игровая площадка для Финни · 120 монет',
+        ),
         matching: find.byType(Card),
       );
       await tap(
@@ -215,6 +236,9 @@ void main() {
           'task-${tester.widget<TaskPanel>(find.byType(TaskPanel)).definition.interactionType.name}',
         );
         await click('Проверить ответ');
+        await screenshot(
+          'feedback-${title.hashCode}-${wrong ? 'wrong' : 'reward'}',
+        );
         if (wrong) {
           expect(find.text('Награда не начислена'), findsOneWidget);
         }
@@ -240,7 +264,10 @@ void main() {
             matching: find.widgetWithText(FilledButton, 'Посмотреть покупку'),
           ),
         );
-        await confirm();
+        await screenshot('purchase-preview');
+        await click('Подтвердить');
+        await screenshot('purchase-result');
+        await result();
       }
 
       Future<void> deposit(int n) async {
@@ -409,11 +436,9 @@ void main() {
       await click('Войти во взрослый раздел');
       await click('Настройки');
       await click('Крупный текст');
-      await result();
       expect((await state()).settings.largeTextPreferred, isTrue);
       await screenshot('settings-large');
       await click('Крупный текст');
-      await result();
       await tap(find.byTooltip('Взрослому'));
       await fill(find.byType(TextField), '15');
       await click('Войти во взрослый раздел');

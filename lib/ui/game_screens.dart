@@ -3,19 +3,23 @@ part of 'finni_app.dart';
 extension _RemainingScreens on _GameShellState {
   List<Widget> tasksPage(GameState state) => [
     heading('Давай поиграем!'),
-    const Text('Учебные задания. Покупки и копилка не меняются.'),
+    const ResourceText('Учебные задания. Покупки и копилка не меняются.'),
     for (final task in state.taskHub.tasks)
       card(
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(task.title, style: Theme.of(context).textTheme.titleMedium),
-            Text(
+            ResourceText(
+              task.title,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            ResourceText(
               task.completed
                   ? 'Выполнено · награда получена'
                   : 'Награда ${task.rewardAmount} монет',
             ),
-            if (task.unavailableReason != null) Text(task.unavailableReason!),
+            if (task.unavailableReason != null)
+              ResourceText(task.unavailableReason!),
             button(
               task.completed ? 'Посмотреть задание' : 'Открыть задание',
               () {
@@ -45,7 +49,7 @@ extension _RemainingScreens on _GameShellState {
             snapshot.data?.errorCode != null) {
           return Column(
             children: [
-              const Text('Задание не удалось открыть.'),
+              const ResourceText('Задание не удалось открыть.'),
               button('Повторить загрузку задания', () {
                 update(
                   () => taskDefinition = widget.service.getTaskDefinition(
@@ -61,7 +65,9 @@ extension _RemainingScreens on _GameShellState {
             .where((t) => t.id == selectedTask)
             .firstOrNull;
         if (task == null) {
-          return const Text('Задание больше недоступно. Вернись к списку.');
+          return const ResourceText(
+            'Задание больше недоступно. Вернись к списку.',
+          );
         }
         return TaskPanel(
           key: ValueKey(
@@ -132,12 +138,15 @@ extension _RemainingScreens on _GameShellState {
     heading('Итог периода ${state.currentPeriod.number}'),
     coins(state),
     if (state.currentPeriod.status == PeriodStatus.open) ...[
-      ...budget(state).skip(1),
+      if (state.currentPeriod.budgetPlan case final plan?)
+        planFactCard(plan, state.currentPeriod.actual)
+      else
+        ...budget(state).skip(2),
       button('Завершить период', () => periodAction(state, finish: true)),
     ] else ...[
       if (lastSummary?.periodId == state.currentPeriod.id)
         periodSummaryCard(lastSummary!),
-      Text(
+      ResourceText(
         'Завершено: ${state.learningProgress.completedPeriods} · баллы заботы: ${state.learningProgress.qualityPoints}',
       ),
       if (state.currentPeriod.status == PeriodStatus.closed)
@@ -146,7 +155,7 @@ extension _RemainingScreens on _GameShellState {
           () => periodAction(state, finish: false),
         )
       else
-        const Text(
+        const ResourceText(
           'Пять периодов завершены! Посмотри, чему вы научились вместе.',
         ),
     ],
@@ -168,7 +177,7 @@ extension _RemainingScreens on _GameShellState {
       expectedRevision: state.stateRevision,
       goalId: goal.goalId,
     );
-    await confirm(
+    final applied = await confirm(
       () => widget.service.previewGoalRedemption(query),
       (warnings, id) => widget.service.redeemGoal(
         GoalCommand(
@@ -181,7 +190,7 @@ extension _RemainingScreens on _GameShellState {
         ),
       ),
     );
-    if (mounted) {
+    if (mounted && applied) {
       navigate(_Page.savings);
     }
   }
@@ -190,7 +199,7 @@ extension _RemainingScreens on _GameShellState {
     if (!adultUnlocked) {
       return [
         heading('Взрослому'),
-        const Text('Попроси взрослого помочь. Сколько будет 8 + 7?'),
+        const ResourceText('Попроси взрослого помочь. Сколько будет 8 + 7?'),
         number('Ответ взрослого', adultAnswer),
         button('Войти во взрослый раздел', () {
           if (adultAnswer.text.trim() != '15') {
@@ -205,22 +214,24 @@ extension _RemainingScreens on _GameShellState {
             adultAnswer.clear();
           });
         }),
-        const Text('Это защита от случайного нажатия, а не проверка личности.'),
+        const ResourceText(
+          'Это защита от случайного нажатия, а не проверка личности.',
+        ),
       ];
     }
     return [
       heading('Играем и обсуждаем'),
-      Text(
+      ResourceText(
         'Профиль: ${state.pet.name} · ${state.profile.mode == ProfileMode.demo ? 'демо' : 'обычная игра'}',
       ),
-      Text(
+      ResourceText(
         'Периодов: ${state.learningProgress.completedPeriods} · заданий: ${state.taskHub.tasks.where((t) => t.completed).length}/6',
       ),
-      const Text(
+      const ResourceText(
         'Обсудите: что было нужным, что можно отложить и как получилась мечта. Прогресс не является оценкой ребёнка.',
       ),
       for (final theme in TaskTheme.values)
-        Text(
+        ResourceText(
           '${switch (theme) {
             TaskTheme.budget => 'Бюджет',
             TaskTheme.savings => 'Накопления',
@@ -289,7 +300,7 @@ extension _RemainingScreens on _GameShellState {
       bool value,
       ProfileSettings Function(bool) settings,
     ) => SwitchListTile(
-      title: Text(label),
+      title: ResourceText(label),
       value: value,
       onChanged: blocked
           ? null
@@ -336,7 +347,7 @@ extension _RemainingScreens on _GameShellState {
           largeTextPreferred: v,
         ),
       ),
-      const Text(
+      const ResourceText(
         'Настройки сохраняются для этого питомца. Системное увеличение текста также учитывается.',
       ),
     ];

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -7,6 +9,8 @@ import 'pet_avatar.dart';
 import 'task_panel.dart';
 import 'history_panel.dart';
 import 'confirmation_dialog.dart';
+import 'resource_art.dart';
+import 'action_celebration.dart';
 part 'game_screens.dart';
 
 class FinniApp extends StatelessWidget {
@@ -62,7 +66,7 @@ class FinniApp extends StatelessWidget {
               child: Center(
                 child: Padding(
                   padding: EdgeInsets.all(24),
-                  child: Text(
+                  child: ResourceText(
                     'Интерфейс подготовлен. Игровой сервис ещё не подключён.\n'
                     'Тестовый просмотр запускается отдельно через main_preview.dart.',
                     textAlign: TextAlign.center,
@@ -133,6 +137,10 @@ class _GameShellState extends State<_GameShell> {
 
   @override
   void dispose() {
+    cancelPreview();
+    if (celebrationDone case final done? when !done.isCompleted) {
+      done.complete();
+    }
     scroll.dispose();
     adultAnswer.dispose();
     game.dispose();
@@ -142,12 +150,36 @@ class _GameShellState extends State<_GameShell> {
     super.dispose();
   }
 
+  String? activeButton;
+  String? pendingButton;
+  PreviewResult? pendingPreview;
+  Completer<bool>? pendingAnswer;
+  ActionResult? celebration;
+  Completer<void>? celebrationDone;
+  void cancelPreview() {
+    final answer = pendingAnswer;
+    pendingAnswer = null;
+    pendingPreview = null;
+    pendingButton = null;
+    if (answer != null && !answer.isCompleted) answer.complete(false);
+  }
+
+  void closeCelebration() {
+    final done = celebrationDone;
+    setState(() {
+      celebration = null;
+      celebrationDone = null;
+    });
+    if (done != null && !done.isCompleted) done.complete();
+  }
+
   bool get blocked => game.busy || game.canRetry;
 
   void navigate(_Page target) {
     if (blocked) {
       return;
     }
+    cancelPreview();
     if (target == _Page.help) {
       helpReturn = page;
     }
@@ -173,22 +205,73 @@ class _GameShellState extends State<_GameShell> {
     });
   }
 
-  Widget button(String text, VoidCallback? action, {bool secondary = false}) =>
-      Padding(
-        padding: const EdgeInsets.only(top: 10),
-        child: SizedBox(
-          width: double.infinity,
-          child: secondary
-              ? OutlinedButton(
-                  onPressed: blocked ? null : action,
-                  child: Text(text),
-                )
-              : FilledButton(
-                  onPressed: blocked ? null : action,
-                  child: Text(text),
+  Widget button(
+    String text,
+    VoidCallback? action, {
+    bool secondary = false,
+    String? anchor,
+  }) {
+    final id = anchor ?? text;
+    final preview = pendingButton == id ? pendingPreview : null;
+    void invoke() {
+      activeButton = id;
+      action?.call();
+    }
+
+    final control = SizedBox(
+      width: double.infinity,
+      child: secondary
+          ? OutlinedButton(
+              onPressed: blocked
+                  ? null
+                  : action == null
+                  ? null
+                  : invoke,
+              child: ResourceText(text),
+            )
+          : FilledButton(
+              onPressed: blocked
+                  ? null
+                  : action == null
+                  ? null
+                  : invoke,
+              child: ResourceText(text),
+            ),
+    );
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: preview == null
+          ? control
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (preview.allowed)
+                  FilledButton(
+                    onPressed: blocked
+                        ? null
+                        : () {
+                            final answer = pendingAnswer;
+                            if (answer != null && !answer.isCompleted) {
+                              answer.complete(true);
+                            }
+                          },
+                    child: const ResourceText('Подтвердить'),
+                  ),
+                if (!preview.allowed) ResourceText(preview.messageForChild),
+                if (preview.expectedMoneyDelta case final delta?)
+                  moneyChanges(delta),
+                if (preview.expectedPetDelta case final pet?) petChanges(pet),
+                for (final message
+                    in preview.warnings.map((w) => w.messageForChild).toSet())
+                  ResourceText(message),
+                TextButton(
+                  onPressed: blocked ? null : () => setState(cancelPreview),
+                  child: const ResourceText('Отмена'),
                 ),
-        ),
-      );
+              ],
+            ),
+    );
+  }
 
   Widget card(Widget child) => Card(
     child: Padding(padding: const EdgeInsets.all(14), child: child),
@@ -196,7 +279,7 @@ class _GameShellState extends State<_GameShell> {
 
   Widget heading(String text) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 12),
-    child: Text(text, style: Theme.of(context).textTheme.headlineSmall),
+    child: ResourceText(text, style: Theme.of(context).textTheme.headlineSmall),
   );
 
   Widget metric(IconData icon, Color color, String label, String value) =>
@@ -208,10 +291,13 @@ class _GameShellState extends State<_GameShell> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, color: color, size: 25),
+                ResourceArt(kind: resourceKind(icon), size: 25),
                 const SizedBox(width: 6),
                 Flexible(
-                  child: Text(value, style: const TextStyle(fontSize: 19)),
+                  child: ResourceText(
+                    value,
+                    style: const TextStyle(fontSize: 19),
+                  ),
                 ),
               ],
             ),
@@ -223,7 +309,7 @@ class _GameShellState extends State<_GameShell> {
     Widget balance(String label, IconData icon, Color color, int value) => card(
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [Text(label), metric(icon, color, label, '$value')],
+        children: [ResourceText(label), metric(icon, color, label, '$value')],
       ),
     );
     final available = balance(
@@ -256,6 +342,7 @@ class _GameShellState extends State<_GameShell> {
     padding: const EdgeInsets.symmetric(vertical: 8),
     child: TextField(
       controller: controller,
+      onChanged: (_) => setState(cancelPreview),
       enabled: !blocked,
       keyboardType: TextInputType.number,
       inputFormatters: [
@@ -271,6 +358,16 @@ class _GameShellState extends State<_GameShell> {
     animation: game,
     builder: (context, _) {
       final state = game.state;
+      if (celebration case final result?) {
+        return MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(textScale)),
+          child: ActionCelebration(
+            result: result,
+            onContinue: closeCelebration,
+          ),
+        );
+      }
       return MediaQuery(
         data: MediaQuery.of(context).copyWith(
           textScaler: TextScaler.linear(textScale),
@@ -293,7 +390,7 @@ class _GameShellState extends State<_GameShell> {
           },
           child: Scaffold(
             appBar: AppBar(
-              title: const Text('Питомец Финни'),
+              title: const ResourceText('Питомец Финни'),
               leading: page == _Page.home
                   ? null
                   : IconButton(
@@ -325,8 +422,10 @@ class _GameShellState extends State<_GameShell> {
                 children: [
                   if (widget.previewMode)
                     const MaterialBanner(
-                      content: Text('Тестовый UI · данные не сохраняются'),
-                      actions: [Text('ПРОСМОТР')],
+                      content: ResourceText(
+                        'Тестовый UI · данные не сохраняются',
+                      ),
+                      actions: [ResourceText('ПРОСМОТР')],
                     ),
                   if (game.busy)
                     const LinearProgressIndicator(semanticsLabel: 'Загружаем'),
@@ -340,7 +439,7 @@ class _GameShellState extends State<_GameShell> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                ResourceText(
                                   game.error!,
                                   semanticsLabel: 'Ошибка: ${game.error}',
                                 ),
@@ -356,7 +455,7 @@ class _GameShellState extends State<_GameShell> {
                                             await game.initialize();
                                           }
                                         },
-                                  child: Text(
+                                  child: ResourceText(
                                     game.canRetry
                                         ? 'Повторить действие'
                                         : 'Повторить загрузку',
@@ -366,7 +465,7 @@ class _GameShellState extends State<_GameShell> {
                             ),
                           ),
                         if (inputError != null)
-                          Text(
+                          ResourceText(
                             inputError!,
                             style: TextStyle(
                               color: Theme.of(context).colorScheme.error,
@@ -436,12 +535,12 @@ class _GameShellState extends State<_GameShell> {
 
   List<Widget> welcome() {
     final config = game.bootstrap;
-    if (config == null) return [const Text('Подготавливаем игру…')];
+    if (config == null) return [const ResourceText('Подготавливаем игру…')];
     final form = formId ?? config.petForms.first.id;
     final palette = paletteId ?? config.petPalettes.first.id;
     return [
       heading('Знакомься, Финни!'),
-      const Text(
+      const ResourceText(
         'Планируй монеты, выбирай нужное и копи на мечту. Здесь только игровые деньги.',
       ),
       for (final profile in game.profiles)
@@ -462,13 +561,13 @@ class _GameShellState extends State<_GameShell> {
       Center(
         child: PetAvatar(formId: form, paletteId: palette),
       ),
-      const Text('Форма'),
+      const ResourceText('Форма'),
       Wrap(
         spacing: 8,
         children: [
           for (final option in config.petForms)
             ChoiceChip(
-              label: Text(option.label),
+              label: ResourceText(option.label),
               selected: form == option.id,
               onSelected: blocked
                   ? null
@@ -476,13 +575,13 @@ class _GameShellState extends State<_GameShell> {
             ),
         ],
       ),
-      const Text('Окраска и узор'),
+      const ResourceText('Окраска и узор'),
       Wrap(
         spacing: 8,
         children: [
           for (final option in config.petPalettes)
             ChoiceChip(
-              label: Text(option.label),
+              label: ResourceText(option.label),
               selected: palette == option.id,
               onSelected: blocked
                   ? null
@@ -491,7 +590,7 @@ class _GameShellState extends State<_GameShell> {
         ],
       ),
       SwitchListTile(
-        title: const Text('Демо: пять периодов'),
+        title: const ResourceText('Демо: пять периодов'),
         value: mode == ProfileMode.demo,
         onChanged: blocked
             ? null
@@ -525,7 +624,7 @@ class _GameShellState extends State<_GameShell> {
     _Page.shop => [
       heading('Покупки'),
       coins(state),
-      Text(
+      ResourceText(
         'Покупок использовано: ${state.currentPeriod.purchaseSlotsUsed} из ${state.currentPeriod.purchaseSlotsTotal}',
       ),
       catalog<ItemSummary>(
@@ -534,15 +633,21 @@ class _GameShellState extends State<_GameShell> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(item.title, style: Theme.of(context).textTheme.titleMedium),
-              Text(
+              ResourceText(
+                item.title,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              ResourceText(
                 '${item.price} монет · ${item.expenseType == ExpenseType.need ? 'Нужное' : 'Желание'}',
               ),
-              Text(item.petEffect.explanationForChild),
+              ResourceArt(kind: itemKind(item.id), size: 56),
+              if (item.petEffect.explanationForChild != item.title)
+                ResourceText(item.petEffect.explanationForChild),
               if (item.availabilityReason != null)
-                Text(item.availabilityReason!),
+                ResourceText(item.availabilityReason!),
               button(
                 item.purchasedThisPeriod ? 'Уже куплено' : 'Посмотреть покупку',
+                anchor: item.id,
                 item.purchasedThisPeriod ||
                         !item.availableThisPeriod ||
                         state.currentPeriod.status != PeriodStatus.open
@@ -570,18 +675,20 @@ class _GameShellState extends State<_GameShell> {
     _Page.settings => settingsPage(state),
     _Page.progress => [
       heading('Как мы растём'),
-      Text('Баллы заботы: ${state.learningProgress.qualityPoints}'),
+      ResourceText('Баллы заботы: ${state.learningProgress.qualityPoints}'),
       button('История решений', () => navigate(_Page.history), secondary: true),
-      Text('Завершено периодов: ${state.learningProgress.completedPeriods}'),
-      Text(
+      ResourceText(
+        'Завершено периодов: ${state.learningProgress.completedPeriods}',
+      ),
+      ResourceText(
         'Выполнено заданий: ${state.taskHub.tasks.where((t) => t.completed).length} из ${state.taskHub.tasks.length}',
       ),
-      const Text(
+      const ResourceText(
         'Рост зависит от серии решений: нужных покупок, соблюдения плана и накоплений.',
       ),
       for (final stage in state.learningProgress.stageHistory)
         card(
-          Text(
+          ResourceText(
             '${stageLabel(stage.stage)} · после периода ${stage.reachedAfterPeriod}',
           ),
         ),
@@ -597,7 +704,7 @@ class _GameShellState extends State<_GameShell> {
 
   List<Widget> home(GameState state) => [
     heading('Привет, ${state.pet.name}!'),
-    Text(
+    ResourceText(
       'Период ${state.currentPeriod.number}${state.profile.mode == ProfileMode.demo ? ' · демо' : ''}',
     ),
     coins(state),
@@ -612,7 +719,7 @@ class _GameShellState extends State<_GameShell> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              ResourceText(
                 stageLabel(state.pet.stage),
                 style: const TextStyle(
                   fontFamily: 'Neucha',
@@ -620,7 +727,7 @@ class _GameShellState extends State<_GameShell> {
                   color: Color(0xff68428d),
                 ),
               ),
-              Text(switch (state.pet.moodCode) {
+              ResourceText(switch (state.pet.moodCode) {
                 MoodCode.happy => 'Радуется',
                 MoodCode.calm => 'Спокоен',
                 MoodCode.needsAttention => 'Нужна забота',
@@ -647,8 +754,8 @@ class _GameShellState extends State<_GameShell> {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Следующее задание'),
-          Text(
+          const ResourceText('Следующее задание'),
+          ResourceText(
             state.taskHub.recommendedTask?.title ??
                 'Посмотри выполненные задания',
           ),
@@ -660,7 +767,7 @@ class _GameShellState extends State<_GameShell> {
     button('Прогресс', () => navigate(_Page.progress), secondary: true),
     button('Итог периода', () => navigate(_Page.period), secondary: true),
     if (state.currentPeriod.status != PeriodStatus.open)
-      Text(
+      ResourceText(
         state.currentPeriod.status == PeriodStatus.demoCompleted
             ? 'Пять периодов завершены. Нового дохода в этом демо нет.'
             : 'Период закрыт.',
@@ -673,9 +780,9 @@ class _GameShellState extends State<_GameShell> {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(goal?.title ?? 'Выберем мечту?'),
+          ResourceText(goal?.title ?? 'Выберем мечту?'),
           if (goal != null) ...[
-            Text('${goal.savedAmount} из ${goal.targetAmount} монет'),
+            ResourceText('${goal.savedAmount} из ${goal.targetAmount} монет'),
             LinearProgressIndicator(
               value: goal.targetAmount > 0
                   ? (goal.savedAmount / goal.targetAmount)
@@ -685,7 +792,7 @@ class _GameShellState extends State<_GameShell> {
               semanticsLabel:
                   'Накоплено ${goal.savedAmount} из ${goal.targetAmount}',
             ),
-            Text('Осталось ${goal.remainingAmount} монет'),
+            ResourceText('Осталось ${goal.remainingAmount} монет'),
           ] else
             button('Выбрать цель', () => navigate(_Page.savings)),
         ],
@@ -698,26 +805,14 @@ class _GameShellState extends State<_GameShell> {
     if (plan != null) {
       return [
         heading('Мой бюджет · план и факт'),
-        const Text(
-          'Подтверждённый план сохранён. Его можно сравнить с решениями.',
-        ),
-        card(
-          Text(
-            'Нужное: ${plan.needsLimit} / ${state.currentPeriod.actual.needsSpent}\n'
-            'Желания: ${plan.wantsLimit} / ${state.currentPeriod.actual.wantsSpent}\n'
-            'В копилку: ${plan.savingsTarget} / ${state.currentPeriod.actual.qualifyingSavings}',
-          ),
-        ),
-        const Text(
-          'Слева план, справа факт. Накопления — пополнения за вычетом обычных снятий.',
-        ),
+        planFactCard(plan, state.currentPeriod.actual),
         coins(state),
       ];
     }
     return [
       heading('Мой бюджет'),
       coins(state),
-      const Text(
+      const ResourceText(
         'Распредели монеты. План сам ничего не покупает и не переводит.',
       ),
       number('Нужное', needs),
@@ -784,13 +879,15 @@ class _GameShellState extends State<_GameShell> {
         return card(
           Column(
             children: [
-              const Text('Не удалось загрузить каталог.'),
+              const ResourceText('Не удалось загрузить каталог.'),
               button('Повторить', retry),
             ],
           ),
         );
       }
-      if (snapshot.data!.items.isEmpty) return const Text('Каталог пока пуст.');
+      if (snapshot.data!.items.isEmpty) {
+        return const ResourceText('Каталог пока пуст.');
+      }
       return Column(children: snapshot.data!.items.map(render).toList());
     },
   );
@@ -802,7 +899,7 @@ class _GameShellState extends State<_GameShell> {
       expectedRevision: state.stateRevision,
       itemId: item.id,
     );
-    await confirm(
+    final applied = await confirm(
       () => widget.service.previewPurchase(query),
       (accepted, id) => widget.service.buyItem(
         PurchaseCommand(
@@ -815,7 +912,7 @@ class _GameShellState extends State<_GameShell> {
         ),
       ),
     );
-    if (mounted) navigate(_Page.shop);
+    if (mounted && applied) navigate(_Page.shop);
   }
 
   List<Widget> savingsPage(GameState state) => [
@@ -874,9 +971,10 @@ class _GameShellState extends State<_GameShell> {
       (goal) => card(
         Column(
           children: [
-            Text('${goal.title} · ${goal.targetAmount} монет'),
+            ResourceText('${goal.title} · ${goal.targetAmount} монет'),
             button(
               goal.selected ? 'Выбрана' : 'Выбрать',
+              anchor: goal.id,
               goal.selected || state.currentPeriod.status != PeriodStatus.open
                   ? null
                   : () async {
@@ -886,7 +984,7 @@ class _GameShellState extends State<_GameShell> {
                         expectedRevision: state.stateRevision,
                         goalId: goal.id,
                       );
-                      await confirm(
+                      final applied = await confirm(
                         () => widget.service.previewGoalChange(query),
                         (accepted, id) => widget.service.changeGoal(
                           GoalCommand(
@@ -899,7 +997,7 @@ class _GameShellState extends State<_GameShell> {
                           ),
                         ),
                       );
-                      if (mounted) navigate(_Page.savings);
+                      if (mounted && applied) navigate(_Page.savings);
                     },
             ),
           ],
@@ -909,55 +1007,29 @@ class _GameShellState extends State<_GameShell> {
     ),
   ];
 
-  Future<void> confirm(
+  Future<bool> confirm(
     Future<PreviewResult> Function() preview,
     Future<ActionResult> Function(Set<WarningCode>, String) action,
   ) async {
+    cancelPreview();
+    final source = activeButton;
     final result = await game.preview(preview);
-    if (!mounted || result == null) return;
-    final accepted = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          result.allowed ? 'Проверим действие' : 'Действие пока недоступно',
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(result.messageForChild),
-              if (result.expectedMoneyDelta case final delta?)
-                Text(
-                  'Изменение доступных монет: ${delta.availableChange}\nИзменение копилки: ${delta.savingsChange}',
-                ),
-              if (result.expectedPetDelta case final delta?)
-                Text(delta.explanationForChild),
-              for (final warning in result.warnings)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(warning.messageForChild),
-                ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Отмена'),
-          ),
-          if (result.allowed)
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Подтвердить'),
-            ),
-        ],
-      ),
-    );
-    if (!mounted || accepted != true) return;
+    if (!mounted || result == null || source == null) return false;
+    final answer = Completer<bool>();
+    setState(() {
+      pendingPreview = result;
+      pendingButton = source;
+      pendingAnswer = answer;
+    });
+    final accepted = await answer.future;
+    if (!mounted) return false;
+    setState(cancelPreview);
+    if (!accepted) return false;
     final warnings = result.warnings.map((w) => w.code).toSet();
     final id = game.newActionId();
-    await showResult(await game.execute(() => action(warnings, id)));
+    final applied = await game.execute(() => action(warnings, id));
+    await showResult(applied);
+    return applied?.success == true;
   }
 
   Future<void> showResult(ActionResult? result) async {
@@ -986,66 +1058,35 @@ class _GameShellState extends State<_GameShell> {
         !widget.previewMode) {
       SystemSound.play(SystemSoundType.click).catchError((Object _) {});
     }
-    final message = result.outcome == ActionOutcome.replayed
-        ? 'Действие уже было сохранено. Показаны актуальные данные.'
-        : result.messageForChild;
-    await showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Результат'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(message),
-              if (result.taskAttempt case final attempt?
-                  when result.outcome != ActionOutcome.replayed) ...[
-                Text(attempt.explanation),
-                Text(
-                  attempt.rewardGranted
-                      ? 'Награда: +${attempt.rewardAmount} монет'
-                      : 'Награда не начислена',
-                ),
-                Text('Попыток осталось: ${attempt.remainingAttempts}'),
-              ],
-              if (result.moneyDelta case final money?
-                  when result.outcome != ActionOutcome.replayed)
-                Text(
-                  'Доступно: ${money.availableChange >= 0 ? '+' : ''}${money.availableChange} · копилка: ${money.savingsChange >= 0 ? '+' : ''}${money.savingsChange}',
-                ),
-              if (result.petDelta case final delta?
-                  when result.outcome != ActionOutcome.replayed)
-                Text(delta.explanationForChild),
-              if (result.periodSummary case final summary?)
-                periodSummaryCard(summary),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Продолжить'),
-          ),
-        ],
-      ),
-    );
+    if (page == _Page.settings) return;
+    final done = Completer<void>();
+    setState(() {
+      celebration = result;
+      celebrationDone = done;
+    });
+    await done.future;
   }
 
   List<Widget> help() => [
     heading('Подсказки'),
     button('Вернуться к игре', () => navigate(helpReturn), secondary: true),
-    card(const Text('Бюджет — план: сколько потратить и сколько отложить.')),
     card(
-      const Text('Сначала нужное. Желания можно отложить на следующий период.'),
+      const ResourceText(
+        'Бюджет — план: сколько потратить и сколько отложить.',
+      ),
     ),
     card(
-      const Text(
+      const ResourceText(
+        'Сначала нужное. Желания можно отложить на следующий период.',
+      ),
+    ),
+    card(
+      const ResourceText(
         'Накопления — монеты, оставленные на будущую цель. Перевод в копилку не является новым доходом.',
       ),
     ),
     card(
-      const Text(
+      const ResourceText(
         'Ошибка — это опыт. Посмотри объяснение и попробуй другой выбор.',
       ),
     ),

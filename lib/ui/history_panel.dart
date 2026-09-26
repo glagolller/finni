@@ -1,3 +1,5 @@
+import 'resource_art.dart';
+
 import 'package:flutter/material.dart';
 
 import '../contracts/contracts.dart';
@@ -8,27 +10,23 @@ Widget periodSummaryCard(PeriodSummary summary) => Card(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        ResourceText(
           'Итог периода ${summary.number}',
           style: const TextStyle(fontFamily: 'Pangolin', fontSize: 24),
         ),
-        Text('Отложено ${summary.actual.qualifyingSavings} монет'),
-        Text(
+        ResourceText('Отложено ${summary.actual.qualifyingSavings} монет'),
+        ResourceText(
           'Баллы заботы: +${summary.qualityPointsGranted} · всего ${summary.qualityPointsTotal}',
         ),
-        Text(
+        ResourceText(
           'Сытость ${summary.satietyAfter}/100 · настроение ${summary.moodAfter}/100',
         ),
         ExpansionTile(
           tilePadding: EdgeInsets.zero,
-          title: const Text('Почему так получилось?'),
+          title: const ResourceText('Почему так получилось?'),
           children: [
-            Text(summary.explanationForChild),
-            Text(
-              'План / факт\nНужное: ${summary.plan.needsLimit} / ${summary.actual.needsSpent}\n'
-              'Желания: ${summary.plan.wantsLimit} / ${summary.actual.wantsSpent}\n'
-              'Копилка: ${summary.plan.savingsTarget} / ${summary.actual.qualifyingSavings}',
-            ),
+            ResourceText(summary.explanationForChild),
+            planFactCard(summary.plan, summary.actual),
           ],
         ),
       ],
@@ -131,15 +129,15 @@ class _HistoryPanelState extends State<HistoryPanel> {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      Text('История', style: Theme.of(context).textTheme.headlineSmall),
+      ResourceText('История', style: Theme.of(context).textTheme.headlineSmall),
       if (loaded && transactions.isEmpty)
-        const Text('Здесь появятся твои решения.'),
+        const ResourceText('Здесь появятся твои решения.'),
       for (final p in periods.values) periodSummaryCard(p),
       for (final goal in goals.values)
         Card(
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: Text(
+            child: ResourceText(
               'Мечта получена: ${goal.title} · ${goal.amountSpent} монет',
             ),
           ),
@@ -152,12 +150,13 @@ class _HistoryPanelState extends State<HistoryPanel> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${label(t.type)} · ${t.amount} монет'),
-                if (titles[t.relatedEntityId] case final title?) Text(title),
-                Text(
+                ResourceText('${label(t.type)} · ${t.amount} монет'),
+                if (titles[t.relatedEntityId] case final title?)
+                  ResourceText(title),
+                ResourceText(
                   'Доступно: ${t.availableChange >= 0 ? '+' : ''}${t.availableChange} · копилка: ${t.savingsChange >= 0 ? '+' : ''}${t.savingsChange}',
                 ),
-                Text(
+                ResourceText(
                   '${t.createdAt.toLocal().day}.${t.createdAt.toLocal().month} · ${t.createdAt.toLocal().hour}:${t.createdAt.toLocal().minute.toString().padLeft(2, '0')}',
                 ),
               ],
@@ -166,11 +165,15 @@ class _HistoryPanelState extends State<HistoryPanel> {
         ),
       if (loading) const LinearProgressIndicator(),
       if (failed)
-        const Text('Историю не удалось загрузить. Сохранения не изменились.'),
+        const ResourceText(
+          'Историю не удалось загрузить. Сохранения не изменились.',
+        ),
       if (!loading && (failed || cursor != null))
         OutlinedButton(
           onPressed: load,
-          child: Text(failed ? 'Повторить загрузку истории' : 'Показать ещё'),
+          child: ResourceText(
+            failed ? 'Повторить загрузку истории' : 'Показать ещё',
+          ),
         ),
     ],
   );

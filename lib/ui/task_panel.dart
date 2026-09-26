@@ -1,3 +1,5 @@
+import 'resource_art.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -72,7 +74,7 @@ class _TaskPanelState extends State<TaskPanel> {
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: ChoiceChip(
       key: ValueKey('option-$id'),
-      label: Text(label),
+      label: ResourceText(label),
       selected: choice == id,
       onSelected: editable ? (_) => setState(() => choice = id) : null,
     ),
@@ -122,23 +124,23 @@ class _TaskPanelState extends State<TaskPanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
+        ResourceText(
           widget.definition.title,
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         const SizedBox(height: 12),
-        Text(widget.definition.prompt),
+        ResourceText(widget.definition.prompt),
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 8),
-          child: Text('Учебная игра: покупки и копилка не меняются.'),
+          child: ResourceText('Учебная игра: покупки и копилка не меняются.'),
         ),
-        Text(
+        ResourceText(
           widget.status.completed
               ? 'Выполнено. Награда уже получена.'
               : 'Награда: ${widget.definition.rewardAmount} монет · попыток осталось: ${widget.status.remainingAttempts}',
         ),
         if (widget.status.availability != TaskAvailabilityCode.available)
-          Text(
+          ResourceText(
             widget.status.unavailableReason ??
                 'Можно посмотреть задание. Новые ответы сейчас недоступны.',
           ),
@@ -149,7 +151,7 @@ class _TaskPanelState extends State<TaskPanel> {
             :final minimumSavings,
           ) =>
             [
-              Text(
+              ResourceText(
                 'Всего $income. На нужное — хотя бы $minimumNeeds, в копилку — $minimumSavings.',
               ),
               number('needs', 'Нужное'),
@@ -163,7 +165,7 @@ class _TaskPanelState extends State<TaskPanel> {
             :final actualSavings,
           ) =>
             [
-              Text(
+              ResourceText(
                 'Факт: нужное $actualNeeds · желания $actualWants · копилка $actualSavings',
               ),
               for (var i = 0; i < plans.length; i++)
@@ -173,13 +175,13 @@ class _TaskPanelState extends State<TaskPanel> {
                 ),
             ],
           SavingsScheduleInput(:final periodCount, :final minimumPerPeriod) => [
-            Text('В каждом шаге — хотя бы $minimumPerPeriod монет.'),
+            ResourceText('В каждом шаге — хотя бы $minimumPerPeriod монет.'),
             for (var i = 0; i < periodCount; i++)
               number('period-$i', 'Шаг ${i + 1}'),
           ],
           SavingsComparisonInput(:final operations, :final options) => [
             for (final op in operations)
-              Text(
+              ResourceText(
                 '${op.direction == TransferDirection.toSavings ? 'Положили' : 'Взяли'} ${op.amount} монет',
               ),
             for (final opt in options) option(opt.id, opt.label),
@@ -190,12 +192,12 @@ class _TaskPanelState extends State<TaskPanel> {
             :final budget,
           ) =>
             [
-              Text('До $maxSelectedItems предметов · $budget монет'),
+              ResourceText('До $maxSelectedItems предметов · $budget монет'),
               for (final item in items)
                 CheckboxListTile(
                   key: ValueKey('basket-${item.id}'),
                   contentPadding: EdgeInsets.zero,
-                  title: Text('${item.title} · ${item.price}'),
+                  title: ResourceText('${item.title} · ${item.price}'),
                   value: selected.contains(item.id),
                   onChanged: editable
                       ? (v) => setState(() {
@@ -215,14 +217,14 @@ class _TaskPanelState extends State<TaskPanel> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(entry.label),
+                    ResourceText(entry.label),
                     Wrap(
                       spacing: 8,
                       children: [
                         for (final group in targetGroups)
                           ChoiceChip(
                             key: ValueKey('group-${entry.id}-${group.name}'),
-                            label: Text(
+                            label: ResourceText(
                               group == ExpenseType.need ? 'Нужное' : 'Желание',
                             ),
                             selected: groups[entry.id] == group,
@@ -238,7 +240,8 @@ class _TaskPanelState extends State<TaskPanel> {
               ),
           ],
         },
-        if (error != null) Text(error!, semanticsLabel: 'Ошибка: $error'),
+        if (error != null)
+          ResourceText(error!, semanticsLabel: 'Ошибка: $error'),
         const SizedBox(height: 12),
         FilledButton(
           key: const ValueKey('submit-task'),
@@ -255,7 +258,7 @@ class _TaskPanelState extends State<TaskPanel> {
                   await widget.onSubmit(input);
                 }
               : null,
-          child: const Text('Проверить ответ'),
+          child: const ResourceText('Проверить ответ'),
         ),
       ],
     );

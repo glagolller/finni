@@ -31,6 +31,16 @@ ArtKind itemKind(String id) => switch (id.replaceFirst('purchase_', 'item.')) {
   _ => ArtKind.toy,
 };
 
+Color purchaseBackground(ArtKind kind) => switch (kind) {
+  ArtKind.food => const Color(0xffffcd91),
+  ArtKind.toy => const Color(0xffc0d5ff),
+  ArtKind.care => const Color(0xffabe4e4),
+  ArtKind.health => const Color(0xffffc7ce),
+  ArtKind.clothing => const Color(0xffdfc9f3),
+  ArtKind.decor => const Color(0xffc0e8ce),
+  _ => const Color(0xffffdf58),
+};
+
 class ResourceArt extends StatelessWidget {
   const ResourceArt({super.key, required this.kind, this.size = 24});
   final ArtKind kind;

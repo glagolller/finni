@@ -24,3 +24,5 @@ lib/main.dart использует createLogicService. lib/main_preview.dart о�
 finni_app.dart — общая оболочка/навигация и основные экраны; game_screens.dart — оставшиеся сценарии в той же библиотеке; task_panel.dart — ввод типизированных ответов; history_panel.dart — история; confirmation_dialog.dart — подтверждение разрушительных операций; game_controller.dart — координация сервиса. Критерии ответов и экономические расчёты в UI не дублируются.
 
 Текущая переработка обратной связи: [FEEDBACK-REDESIGN](FEEDBACK-REDESIGN.md). Исторические HTML и снимки ui-complete сохраняют прежнюю версию; свежие widget-снимки находятся в evidence/ui-feedback.
+
+Актуальные списки, настройки и барьер: [CATALOG-POLISH](CATALOG-POLISH.md). Предыдущие описания 8+7 и звука относятся к исторической версии.

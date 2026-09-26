@@ -119,7 +119,6 @@ class _GameShellState extends State<_GameShell> {
   Future<TaskDefinitionResult>? taskDefinition;
   PeriodSummary? lastSummary;
   bool adultUnlocked = false;
-  final adultAnswer = TextEditingController();
   _Page helpReturn = _Page.home;
   final scroll = ScrollController();
   double get textScale => (MediaQuery.textScalerOf(context).scale(
@@ -142,7 +141,6 @@ class _GameShellState extends State<_GameShell> {
       done.complete();
     }
     scroll.dispose();
-    adultAnswer.dispose();
     game.dispose();
     for (final controller in [name, needs, wants, savings, amount]) {
       controller.dispose();
@@ -187,7 +185,6 @@ class _GameShellState extends State<_GameShell> {
         target != _Page.settings &&
         target != _Page.help) {
       adultUnlocked = false;
-      adultAnswer.clear();
     }
     if (scroll.hasClients) {
       scroll.jumpTo(0);
@@ -658,6 +655,20 @@ class _GameShellState extends State<_GameShell> {
           ),
         ),
         () => navigate(_Page.shop),
+        visible: (item) =>
+            item.availableThisPeriod &&
+            !item.purchasedThisPeriod &&
+            state.currentPeriod.status == PeriodStatus.open &&
+            state.currentPeriod.purchaseSlotsUsed <
+                state.currentPeriod.purchaseSlotsTotal,
+        emptyMessage: state.currentPeriod.status != PeriodStatus.open
+            ? (state.currentPeriod.status == PeriodStatus.demoCompleted
+                  ? 'Демо завершено. Посмотри историю ваших покупок!'
+                  : 'Период завершён. Покупки появятся в следующем периоде.')
+            : state.currentPeriod.purchaseSlotsUsed >=
+                  state.currentPeriod.purchaseSlotsTotal
+            ? 'На этот период покупок достаточно! Можно подвести итог.'
+            : 'Все доступные предметы куплены — молодец!',
       ),
     ],
     _Page.savings => savingsPage(state),
@@ -863,8 +874,10 @@ class _GameShellState extends State<_GameShell> {
   Widget catalog<T>(
     Future<CatalogResult<T>>? future,
     Widget Function(T) render,
-    VoidCallback retry,
-  ) => FutureBuilder<CatalogResult<T>>(
+    VoidCallback retry, {
+    bool Function(T)? visible,
+    String emptyMessage = 'Каталог пока пуст.',
+  }) => FutureBuilder<CatalogResult<T>>(
     future: future,
     builder: (context, snapshot) {
       if (snapshot.connectionState != ConnectionState.done) {
@@ -888,7 +901,11 @@ class _GameShellState extends State<_GameShell> {
       if (snapshot.data!.items.isEmpty) {
         return const ResourceText('Каталог пока пуст.');
       }
-      return Column(children: snapshot.data!.items.map(render).toList());
+      final shown = snapshot.data!.items
+          .where((item) => visible?.call(item) ?? true)
+          .toList();
+      if (shown.isEmpty) return card(ResourceText(emptyMessage));
+      return Column(children: shown.map(render).toList());
     },
   );
 
@@ -1052,11 +1069,6 @@ class _GameShellState extends State<_GameShell> {
     }
     if (!mounted) {
       return;
-    }
-    if (result.outcome == ActionOutcome.applied &&
-        game.state?.settings.soundEnabled == true &&
-        !widget.previewMode) {
-      SystemSound.play(SystemSoundType.click).catchError((Object _) {});
     }
     if (page == _Page.settings) return;
     final done = Completer<void>();

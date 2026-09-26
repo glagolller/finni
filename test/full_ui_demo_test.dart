@@ -136,7 +136,7 @@ void main() {
         await tester.runAsync(() async {
           final image = await boundary.toImage();
           final data = await image.toByteData(format: ui.ImageByteFormat.png);
-          final file = File('evidence/ui-feedback/$name.png');
+          final file = File('evidence/ui-catalog/$name.png');
           await file.parent.create(recursive: true);
           await file.writeAsBytes(data!.buffer.asUint8List());
           image.dispose();
@@ -247,6 +247,9 @@ void main() {
 
       Future<void> buy(String title) async {
         await click('Покупки');
+        if ((await state()).currentPeriod.number == 1) {
+          expect(find.text('Школьный обед'), findsNothing);
+        }
         if (find.text(title).evaluate().isEmpty) {
           await tester.scrollUntilVisible(
             find.text(title),
@@ -266,7 +269,19 @@ void main() {
         );
         await screenshot('purchase-preview');
         await click('Подтвердить');
-        await screenshot('purchase-result');
+        if (title == 'Полезная еда') {
+          expect(
+            tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+            const Color(0xffffcd91),
+          );
+        }
+        if (title == 'Мяч') {
+          expect(
+            tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+            const Color(0xffc0d5ff),
+          );
+        }
+        await screenshot('purchase-result-$title');
         await result();
       }
 
@@ -348,6 +363,12 @@ void main() {
       await buy('Школьный обед');
       await buy('Набор для ухода');
       await buy('Мяч');
+      expect(
+        find.text('На этот период покупок достаточно! Можно подвести итог.'),
+        findsOneWidget,
+      );
+      expect(find.text('Посмотреть покупку'), findsNothing);
+      await screenshot('shop-empty');
       await deposit(30);
       await finish(2, 25, 60);
       expect((await state()).pet.stage, PetStage.junior);
@@ -397,6 +418,12 @@ void main() {
       await buy('Полезная еда');
       await buy('Набор для ухода');
       await buy('Мяч');
+      expect(
+        find.text('На этот период покупок достаточно! Можно подвести итог.'),
+        findsOneWidget,
+      );
+      expect(find.text('Посмотреть покупку'), findsNothing);
+      await screenshot('shop-empty');
       await deposit(30);
       await click('Копилка');
       await click('Получить мечту');
@@ -408,6 +435,10 @@ void main() {
       await screenshot('history');
       await click('Показать ещё');
       await click('Задания');
+      expect(find.text('Ты выполнил все задания — молодец!'), findsOneWidget);
+      expect(find.text('Открыть задание'), findsNothing);
+      await screenshot('tasks-completed');
+      await click('Уже выполнено · 6');
       final reviewCard = find.ancestor(
         of: find.text('Распредели доход'),
         matching: find.byType(Card),
@@ -426,22 +457,20 @@ void main() {
       );
       final original = await state();
       await tap(find.byTooltip('Взрослому'));
-      await fill(find.byType(TextField), '0');
-      await click('Войти во взрослый раздел');
-      expect(
-        find.text('Проверь ответ или попроси взрослого помочь.'),
-        findsOneWidget,
-      );
-      await fill(find.byType(TextField), '15');
-      await click('Войти во взрослый раздел');
+      await screenshot('adult-hold');
+      await click('Удерживайте для входа');
+      expect(find.text('Настройки'), findsNothing);
+      await tester.longPress(find.byKey(const ValueKey('adult-hold')));
+      await settle();
       await click('Настройки');
+      expect(find.text('Звуки'), findsNothing);
       await click('Крупный текст');
       expect((await state()).settings.largeTextPreferred, isTrue);
       await screenshot('settings-large');
       await click('Крупный текст');
       await tap(find.byTooltip('Взрослому'));
-      await fill(find.byType(TextField), '15');
-      await click('Войти во взрослый раздел');
+      await tester.longPress(find.byKey(const ValueKey('adult-hold')));
+      await settle();
 
       await click('Сбросить демо');
       await fill(
@@ -466,8 +495,8 @@ void main() {
       );
       expect((await state()).availableBalance, 100);
       await tap(find.byTooltip('Взрослому'));
-      await fill(find.byType(TextField), '15');
-      await click('Войти во взрослый раздел');
+      await tester.longPress(find.byKey(const ValueKey('adult-hold')));
+      await settle();
       await click('Удалить профиль');
       await fill(
         find.byKey(const ValueKey('destructive-confirmation')),

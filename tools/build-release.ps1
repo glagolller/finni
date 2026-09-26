@@ -26,7 +26,7 @@ foreach ($name in $names) { $previous[$name] = [Environment]::GetEnvironmentVari
 $secretPointer = [IntPtr]::Zero
 Push-Location (Join-Path $PSScriptRoot '..')
 try {
-    $secure = Get-Content -LiteralPath $passwordFile -Raw | ConvertTo-SecureString
+    $secure = (Get-Content -LiteralPath $passwordFile -Raw).Trim() | ConvertTo-SecureString
     $secretPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     $env:FINNI_STORE_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($secretPointer)
     $env:FINNI_KEYSTORE = (Resolve-Path -LiteralPath $keystore).Path

@@ -11,6 +11,7 @@ import 'history_panel.dart';
 import 'confirmation_dialog.dart';
 import 'resource_art.dart';
 import 'action_celebration.dart';
+import 'home_guidance.dart';
 part 'game_screens.dart';
 
 class FinniApp extends StatelessWidget {
@@ -761,18 +762,18 @@ class _GameShellState extends State<_GameShell> {
       ],
     ),
     goalCard(state),
-    card(
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const ResourceText('Следующее задание'),
-          ResourceText(
-            state.taskHub.recommendedTask?.title ??
-                'Посмотри выполненные задания',
-          ),
-          button('К заданиям', () => navigate(_Page.tasks)),
-        ],
-      ),
+    HomeGuidance(
+      state: state,
+      service: widget.service,
+      blocked: blocked,
+      onNavigate: (target) => navigate(switch (target) {
+        GuideDestination.budget => _Page.budget,
+        GuideDestination.shop => _Page.shop,
+        GuideDestination.savings => _Page.savings,
+        GuideDestination.tasks => _Page.tasks,
+        GuideDestination.period => _Page.period,
+        GuideDestination.history => _Page.history,
+      }),
     ),
     button('Мой бюджет', () => navigate(_Page.budget)),
     button('Прогресс', () => navigate(_Page.progress), secondary: true),

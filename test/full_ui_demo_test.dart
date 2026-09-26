@@ -1,3 +1,4 @@
+import 'package:finni/ui/home_guidance.dart';
 import 'package:finni/ui/resource_art.dart';
 
 import 'dart:io';
@@ -136,7 +137,7 @@ void main() {
         await tester.runAsync(() async {
           final image = await boundary.toImage();
           final data = await image.toByteData(format: ui.ImageByteFormat.png);
-          final file = File('evidence/ui-catalog/$name.png');
+          final file = File('evidence/ui-guidance/$name.png');
           await file.parent.create(recursive: true);
           await file.writeAsBytes(data!.buffer.asUint8List());
           image.dispose();
@@ -180,6 +181,10 @@ void main() {
       await click('Начать дружбу');
       await result();
       expect((await state()).availableBalance, 100);
+      expect(
+        nextAdvice(await state(), []).destination,
+        GuideDestination.budget,
+      );
       await click('Копилка');
       final goalCard = find.ancestor(
         of: find.byWidgetPredicate(
@@ -302,6 +307,10 @@ void main() {
         final s = await state();
         expect((s.availableBalance, s.savingsBalance), (available, savings));
         expect(s.learningProgress.completedPeriods, n);
+        expect(
+          nextAdvice(s, []).destination,
+          n == 5 ? GuideDestination.history : GuideDestination.period,
+        );
         debugPrint('UI period $n passed');
         if (n < 5) {
           await click('Начать следующий период');
@@ -310,6 +319,17 @@ void main() {
       }
 
       await plan([50, 20, 30]);
+      final plannedState = await state();
+      final catalog = (await tester.runAsync(
+        () => service.getItemCatalog(plannedState.profile.id),
+      ))!;
+      expect(
+        nextAdvice(plannedState, catalog.items).destination,
+        GuideDestination.shop,
+      );
+      await home();
+      await screenshot('guide-needed-purchase');
+
       await task('Распредели доход', () async {
         await fill(find.byKey(const ValueKey('task-needs')), '50');
         await fill(find.byKey(const ValueKey('task-wants')), '20');
@@ -426,6 +446,10 @@ void main() {
       await screenshot('shop-empty');
       await deposit(30);
       await click('Копилка');
+      expect(
+        nextAdvice(await state(), []).destination,
+        GuideDestination.savings,
+      );
       await click('Получить мечту');
       await confirm();
       await finish(5, 5, 25);
@@ -494,6 +518,10 @@ void main() {
         original.profile.generation + 1,
       );
       expect((await state()).availableBalance, 100);
+      expect(
+        nextAdvice(await state(), []).destination,
+        GuideDestination.budget,
+      );
       await tap(find.byTooltip('Взрослому'));
       await tester.longPress(find.byKey(const ValueKey('adult-hold')));
       await settle();

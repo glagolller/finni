@@ -1,41 +1,69 @@
 part of 'finni_app.dart';
 
 extension _RemainingScreens on _GameShellState {
-  List<Widget> tasksPage(GameState state) => [
-    heading('Давай поиграем!'),
-    const ResourceText('Учебные задания. Покупки и копилка не меняются.'),
-    for (final task in state.taskHub.tasks)
-      card(
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ResourceText(
-              task.title,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            ResourceText(
-              task.completed
-                  ? 'Выполнено · награда получена'
-                  : 'Награда ${task.rewardAmount} монет',
-            ),
-            if (task.unavailableReason != null)
-              ResourceText(task.unavailableReason!),
-            button(
-              task.completed ? 'Посмотреть задание' : 'Открыть задание',
-              () {
-                selectedTask = task.id;
-                taskDraft = TaskDraft();
-                taskDefinition = widget.service.getTaskDefinition(
-                  state.profile.id,
-                  task.id,
-                );
-                navigate(_Page.task);
-              },
-            ),
-          ],
-        ),
+  List<Widget> tasksPage(GameState state) {
+    final available = state.taskHub.tasks
+        .where(
+          (t) =>
+              !t.completed && t.availability == TaskAvailabilityCode.available,
+        )
+        .toList();
+    final completed = state.taskHub.tasks.where((t) => t.completed).toList();
+    Widget taskCard(TaskSummary task) => card(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ResourceText(
+            task.title,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          ResourceText(
+            task.completed
+                ? 'Выполнено · награда получена'
+                : 'Награда ${task.rewardAmount} монет',
+          ),
+          if (task.unavailableReason != null)
+            ResourceText(task.unavailableReason!),
+          button(task.completed ? 'Посмотреть задание' : 'Открыть задание', () {
+            selectedTask = task.id;
+            taskDraft = TaskDraft();
+            taskDefinition = widget.service.getTaskDefinition(
+              state.profile.id,
+              task.id,
+            );
+            navigate(_Page.task);
+          }),
+        ],
       ),
-  ];
+    );
+    return [
+      heading('Давай поиграем!'),
+      if (available.isNotEmpty) const ResourceText('Можно пройти сейчас'),
+      for (final task in available) taskCard(task),
+      if (available.isEmpty)
+        card(
+          ResourceText(
+            completed.length == state.taskHub.tasks.length &&
+                    completed.isNotEmpty
+                ? 'Ты выполнил все задания — молодец!'
+                : state.currentPeriod.status != PeriodStatus.open
+                ? 'Период завершён. Здесь можно посмотреть выполненные задания.'
+                : state.taskHub.tasks.any(
+                    (t) => !t.completed && t.remainingAttempts == 0,
+                  )
+                ? 'На этот период попытки закончились. Новые будут в следующем периоде.'
+                : 'Все доступные задания выполнены — молодец! Новые появятся в следующем периоде.',
+          ),
+        ),
+      if (completed.isNotEmpty)
+        ExpansionTile(
+          title: ResourceText('Уже выполнено · ${completed.length}'),
+          children: [for (final task in completed) taskCard(task)],
+        ),
+      if (available.isEmpty)
+        button('К итогу периода', () => navigate(_Page.period)),
+    ];
+  }
 
   List<Widget> taskPage(GameState state) => [
     FutureBuilder<TaskDefinitionResult>(
@@ -199,23 +227,32 @@ extension _RemainingScreens on _GameShellState {
     if (!adultUnlocked) {
       return [
         heading('Взрослому'),
-        const ResourceText('Попроси взрослого помочь. Сколько будет 8 + 7?'),
-        number('Ответ взрослого', adultAnswer),
-        button('Войти во взрослый раздел', () {
-          if (adultAnswer.text.trim() != '15') {
-            update(
-              () => inputError = 'Проверь ответ или попроси взрослого помочь.',
-            );
-            return;
-          }
-          update(() {
-            adultUnlocked = true;
-            inputError = null;
-            adultAnswer.clear();
-          });
-        }),
         const ResourceText(
-          'Это защита от случайного нажатия, а не проверка личности.',
+          'Раздел для взрослого. Удерживайте кнопку, чтобы войти.',
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: OutlinedButton(
+            key: const ValueKey('adult-hold'),
+            onPressed: blocked
+                ? null
+                : () => update(
+                    () => inputError = 'Удерживайте кнопку немного дольше.',
+                  ),
+            onLongPress: blocked
+                ? null
+                : () => update(() {
+                    adultUnlocked = true;
+                    inputError = null;
+                  }),
+            child: const Padding(
+              padding: EdgeInsets.all(12),
+              child: ResourceText('Удерживайте для входа'),
+            ),
+          ),
+        ),
+        const ResourceText(
+          'Здесь настройки и управление профилем. Удержание защищает от случайного входа; это не проверка возраста.',
         ),
       ];
     }
@@ -320,15 +357,6 @@ extension _RemainingScreens on _GameShellState {
     final s = state.settings;
     return [
       heading('Настройки'),
-      toggle(
-        'Звуки',
-        s.soundEnabled,
-        (v) => ProfileSettings(
-          soundEnabled: v,
-          reducedMotion: s.reducedMotion,
-          largeTextPreferred: s.largeTextPreferred,
-        ),
-      ),
       toggle(
         'Меньше анимации',
         s.reducedMotion,

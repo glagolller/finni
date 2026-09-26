@@ -60,7 +60,9 @@ class ActionCelebration extends StatelessWidget {
         if (!didPop) onContinue();
       },
       child: Scaffold(
-        backgroundColor: const Color(0xffffdf58),
+        backgroundColor: purchase && !replay
+            ? purchaseBackground(kind)
+            : const Color(0xffffdf58),
         body: SafeArea(
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),

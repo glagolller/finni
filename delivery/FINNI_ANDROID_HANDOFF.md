@@ -1,5 +1,8 @@
 # FINNI: debug APK готов, 26.09.2026
 
+Документ описывает предыдущий APK. Новая сборка и хеш:
+[актуальная передача после UI-feedback](FINNI_UI_FEEDBACK_BUILD_HANDOFF.md).
+
 Ветка: `logic/android-build`. База PR: `frontend/service-integration`.
 PR: https://github.com/glagolller/finni/pull/7
 

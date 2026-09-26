@@ -4,6 +4,20 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val releaseStore = System.getenv("FINNI_KEYSTORE")
+val releasePassword = System.getenv("FINNI_STORE_PASSWORD")
+val releaseAlias = System.getenv("FINNI_KEY_ALIAS")
+val releaseSigningReady = listOf(releaseStore, releasePassword, releaseAlias)
+    .all { !it.isNullOrBlank() }
+
+gradle.taskGraph.whenReady {
+    if (allTasks.any { it.name.contains("Release") }) {
+        check(releaseSigningReady) {
+            "Release requires FINNI_KEYSTORE, FINNI_STORE_PASSWORD and FINNI_KEY_ALIAS."
+        }
+    }
+}
+
 android {
     namespace = "ru.finni.pet"
     compileSdk = flutter.compileSdkVersion
@@ -28,9 +42,22 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (releaseSigningReady) {
+            create("release") {
+                storeFile = file(releaseStore!!)
+                storePassword = releasePassword
+                keyAlias = releaseAlias
+                keyPassword = releasePassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Release signing is configured locally before producing the APK.
+            if (releaseSigningReady) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }

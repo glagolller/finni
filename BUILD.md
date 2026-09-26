@@ -1,5 +1,14 @@
 # Сборка и запуск
 
+## Актуально: подсказки и подписанный release-кандидат
+
+Обе сборки из 5eb1095 проверены; версия, хеши, инструкция и ограничения:
+[FINNI_GUIDANCE_BUILD_HANDOFF.md](delivery/FINNI_GUIDANCE_BUILD_HANDOFF.md).
+Release требует отдельного локального ключа через FINNI_KEYSTORE, FINNI_STORE_PASSWORD,
+FINNI_KEY_ALIAS. Windows helper: tools/build-release.ps1. Секреты остаются вне Git.
+Release имеет другую подпись, установка поверх debug не поддерживается.
+Сначала согласовать данные и приёмку на телефоне; ниже сохранены исторические этапы.
+
 ## Проверенная Android-сборка 26.09.2026
 
 Debug APK из lib/main.dart успешно собран на Flutter 3.47.5, JDK 17.0.20.1,
@@ -65,7 +74,8 @@ Release APK:
 flutter build apk --release
 ```
 
-Release signing пока не настроен и не подменяется debug-ключом. Перед выпуском создать локальный keystore, хранить `key.properties` и секреты вне Git и добавить signingConfig по инструкции команды. Передаваемый APK нужно проверить установкой без IDE на Android 8.0+.
+Release signing настроен через переменные окружения и отдельный ключ вне Git.
+Используйте актуальную инструкцию выше. Передаваемый APK нужно проверить установкой без IDE на Android 8.0+.
 
 ## Статус 25.09.2026
 

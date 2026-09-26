@@ -1,5 +1,7 @@
 # FINNI: debug APK каталога и взрослого раздела
 
+Историческая сборка. [Актуальная передача с подсказками и release-кандидатом](FINNI_GUIDANCE_BUILD_HANDOFF.md).
+
 Дата: 26.09.2026. Ветка: `logic/android-catalog`.
 База PR: `frontend/service-integration`. PR: https://github.com/glagolller/finni/pull/9
 

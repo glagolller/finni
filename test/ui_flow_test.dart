@@ -107,7 +107,7 @@ Future<void> capture(WidgetTester tester, String name) async {
   await tester.runAsync(() async {
     final image = await boundary.toImage();
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    final file = File('evidence/ui-catalog/preview-$name.png');
+    final file = File('evidence/ui-guidance/preview-$name.png');
     await file.parent.create(recursive: true);
     await file.writeAsBytes(bytes!.buffer.asUint8List());
     image.dispose();
@@ -195,7 +195,7 @@ void main() {
       final service = PreviewService();
       await start(tester, service);
       expect(find.text('Привет, Финни!'), findsOneWidget);
-      expect(find.text('Сравни план и факт'), findsOneWidget);
+      expect(find.text('Сейчас попробуй'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await capture(tester, 'home-360');
       await tester.tap(find.text('Покупки'));
@@ -360,9 +360,9 @@ void main() {
           PreviewService(snapshot: changed(openPeriodFixture(), stage: stage)),
         );
         expect(tester.takeException(), isNull);
-        expect(find.text('Сравни план и факт'), findsOneWidget);
+        expect(find.text('Сейчас попробуй'), findsOneWidget);
         expect(
-          tester.getBottomRight(find.text('Сравни план и факт')).dy,
+          tester.getBottomRight(find.text('Сейчас попробуй')).dy,
           lessThan(700),
         );
         await capture(tester, 'home-${stage.name}');

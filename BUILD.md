@@ -7,7 +7,7 @@
 Release требует отдельного локального ключа через FINNI_KEYSTORE, FINNI_STORE_PASSWORD,
 FINNI_KEY_ALIAS. Windows helper: tools/build-release.ps1. Секреты остаются вне Git.
 Release имеет другую подпись, установка поверх debug не поддерживается.
-Сначала согласовать данные и приёмку на телефоне; ниже сохранены исторические этапы.
+Приёмка release владельцем Samsung подтверждена 28.09.2026. См. docs/testing/RELEASE-ACCEPTANCE.md. Ниже сохранены исторические этапы.
 
 ## Проверенная Android-сборка 26.09.2026
 

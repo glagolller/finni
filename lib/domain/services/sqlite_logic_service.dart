@@ -210,9 +210,10 @@ class SqliteLogicService implements LogicService {
         errorCode: LogicErrorCode.profileNotFound,
       );
     }
-    final offset = int.tryParse(cursor ?? '') ?? 0;
+    final offset = max(0, int.tryParse(cursor ?? '') ?? 0);
+    final pageLimit = limit.clamp(1, 100);
     final transactions = profile.transactionModels().reversed.toList();
-    final page = transactions.skip(offset).take(limit).toList();
+    final page = transactions.skip(offset).take(pageLimit).toList();
     return HistoryPage(
       transactions: page,
       periodSummaries: profile.periodSummaries

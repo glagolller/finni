@@ -51,6 +51,13 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   uses-material-design: true
+  fonts:
+    - family: Pangolin
+      fonts:
+        - asset: assets/fonts/Pangolin-Regular.ttf
+    - family: Neucha
+      fonts:
+        - asset: assets/fonts/Neucha.ttf
   assets:
     - assets/content/content_manifest.json
     - assets/content/items.json

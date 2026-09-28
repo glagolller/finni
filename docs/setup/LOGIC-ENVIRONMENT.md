@@ -1,5 +1,12 @@
 # Окружение стороны логики
 
+Обновление 26.09.2026: Android SDK установлен в `C:/Users/fpp/.cache/finni/android-sdk`.
+Command-line tools 22.0, API 36, Build Tools 36.0.0, platform-tools 37.0.1,
+NDK 28.2.13676358; Gradle 9.3.1 и JDK 17.0.20.1 проверены сборкой.
+Лицензии приняты пользователем, Android toolchain проходит doctor.
+Debug APK готов; [полные результаты](../../delivery/FINNI_ANDROID_HANDOFF.md).
+Ниже сохранена историческая проверка до установки SDK.
+
 Фактическая проверка обновлена 25.09.2026 на Windows 11 25H2 (`10.0.26200.9457`).
 
 | Компонент | Результат |

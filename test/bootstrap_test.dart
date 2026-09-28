@@ -3,18 +3,29 @@ import 'dart:convert';
 import 'package:finni/contracts/contracts.dart';
 import 'package:finni/main.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('bootstrap root stays empty for the interface owner', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const FinniBootstrapRoot());
-
-    expect(find.byType(SizedBox), findsOneWidget);
-    expect(find.byType(Text), findsNothing);
-  });
+  testWidgets(
+    'production startup failure offers retry without preview fallback',
+    (tester) async {
+      var calls = 0;
+      await tester.pumpWidget(
+        FinniBootstrapRoot(
+          serviceFactory: () async {
+            calls++;
+            throw StateError('unavailable store');
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Не удалось открыть игру'), findsOneWidget);
+      expect(find.textContaining('Тестовый UI'), findsNothing);
+      await tester.tap(find.text('Повторить'));
+      await tester.pumpAndSettle();
+      expect(calls, 2);
+    },
+  );
 
   test('appearance contract exposes nine combinations', () {
     expect(supportedPetFormIds.length, 3);

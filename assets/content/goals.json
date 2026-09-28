@@ -1,0 +1,8 @@
+{
+  "contentVersion": "content_v0.2",
+  "goals": [
+    {"id":"goal.playground","title":"Игровая площадка для Финни","targetAmount":120,"visualAssetId":"goal.playground"},
+    {"id":"goal.bicycle","title":"Велосипедная прогулка","targetAmount":180,"visualAssetId":"goal.bicycle"},
+    {"id":"goal.telescope","title":"Домашний телескоп","targetAmount":240,"visualAssetId":"goal.telescope"}
+  ]
+}
